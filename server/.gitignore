@@ -1,0 +1,6 @@
+/node_modules
+.env
+.babelrc
+/dist
+.idea/
+package-lock.json
