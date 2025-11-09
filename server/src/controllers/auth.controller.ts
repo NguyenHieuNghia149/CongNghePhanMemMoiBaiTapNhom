@@ -10,6 +10,9 @@ import {
 import { UserService } from '@/services/user.service';
 import { EMailService } from '@/services/email.service';
 import { PasswordUtils } from '@/utils/security';
+import { fa } from 'zod/v4/locales';
+import cloudinary from '@/config/cloudinary';
+import { Readable } from 'stream';
 // Removed session revoke validation
 
 export class AuthController {
@@ -20,14 +23,26 @@ export class AuthController {
   ) {}
 
   async register(req: Request, res: Response, next: NextFunction) {
+    console.log(req.body);
     const result = await this.authService.register(req.body as RegisterInput);
 
     console.log(result);
+    // res.cookie('refreshToken', result.tokens.refreshToken, {
+    //   httpOnly: true,
+    //   secure: process.env.NODE_ENV === 'production',
+    //   sameSite: 'strict',
+    //   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    //   path: '/api/auth/refresh-token',
+    // });
+
+    //const { refreshToken, ...tokensWithoutRefresh } = result.tokens;
+
     res.status(201).json({
       success: true,
       message: 'User registered successfully.',
       data: {
         user: result.user,
+        //tokens: tokensWithoutRefresh,
       },
     });
   }
@@ -43,6 +58,7 @@ export class AuthController {
         message: 'User with this email does not exist',
       });
     }
+    console.log(result);
 
     res.cookie('refreshToken', result.tokens.refreshToken, {
       httpOnly: true,
@@ -76,6 +92,15 @@ export class AuthController {
     }
 
     const result = await this.authService.refreshToken({ refreshToken });
+
+    // Set rotated refresh token cookie
+    res.cookie('refreshToken', result.tokens.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/api/auth/refresh-token',
+    });
 
     // Return only access token to client
     const { refreshToken: _rt, ...tokensWithoutRefresh } = result.tokens as any;
@@ -183,38 +208,89 @@ export class AuthController {
     });
   }
 
-  async sendVerificationCode(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void | Response> {
-    try {
-      const { email } = req.body;
+  async getProfileById(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
+    const { userId } = req.params;
 
-      await this.emailService.sendVerificationCode(email);
-
-      res.status(200).json({
-        success: true,
-        message: 'Verification code sent to your email.',
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required',
       });
+    }
+
+    const profile = await this.userService.getProfile(userId);
+
+    res.status(200).json({
+      success: true,
+      data: profile,
+    });
+  }
+
+  async uploadAvatar(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
+    const userId = (req as any).user?.userId;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated',
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded',
+      });
+    }
+
+    try {
+      // Upload to Cloudinary
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'avatars',
+        },
+        async (error: any, result?: any) => {
+          if (error || !result) {
+            console.error('Cloudinary upload error:', error);
+            return res.status(500).json({
+              success: false,
+              message: 'Failed to upload image',
+            });
+          }
+
+          try {
+            // Update user profile with Cloudinary URL
+            const updateData = { avatar: result.secure_url };
+            const profile = await this.userService.updateProfile(userId, updateData);
+
+            return res.status(200).json({
+              success: true,
+              message: 'Avatar updated successfully',
+              data: profile,
+            });
+          } catch (error) {
+            console.error('Profile update error:', error);
+            return res.status(500).json({
+              success: false,
+              message: 'Failed to update profile',
+            });
+          }
+        }
+      );
+
+      // Convert buffer to stream and pipe to Cloudinary
+      const fileBuffer = req.file.buffer;
+      const readableStream = new Readable();
+      readableStream.push(fileBuffer);
+      readableStream.push(null);
+      readableStream.pipe(stream);
+      
     } catch (error) {
+      console.error('Upload error:', error);
       next(error);
     }
   }
 
-  async resetPassword(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
-    try {
-      const { email, otp, newPassword } = req.body;
-      await this.authService.resetPassword(email, otp, newPassword);
-      res.status(200).json({
-        success: true,
-        message: 'Password has been reset successfully. You can now log in with your new password.',
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
+  // Error handling middleware
   static errorHandler(
     error: Error,
     req: Request,
@@ -250,6 +326,31 @@ export class AuthController {
       message: 'Internal server error',
       code: 'INTERNAL_ERROR',
       timestamp: new Date().toISOString(),
+    });
+  }
+
+  async sendVerificationCode(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void | Response> {
+    const { email } = req.body;
+
+    await this.emailService.sendVerificationCode(email);
+
+    res.status(200).json({
+      success: true,
+      message: 'Verification code sent to your email.',
+    });
+  }
+
+  async resetPassword(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
+    const { email, otp, newPassword } = req.body;
+    await this.authService.resetPassword(email, otp, newPassword);
+
+    res.status(200).json({
+      success: true,
+      message: 'Password has been reset successfully. You can now log in with your new password.',
     });
   }
 }

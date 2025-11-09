@@ -19,7 +19,7 @@ import { AuthContextType } from '../../types/auth.types'
  *
  * // Check auth status
  * if (isAuthenticated) {
- *   // User is authenticated
+ *   console.log('User:', user);
  * }
  */
 export const useAuth = (): AuthContextType => {

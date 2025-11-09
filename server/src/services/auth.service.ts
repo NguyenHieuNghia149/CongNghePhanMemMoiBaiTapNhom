@@ -47,10 +47,6 @@ export class AuthService {
       throw new ValidationException(passwordValidation.errors.join(', '));
     }
 
-    if (dto.password !== dto.passwordConfirm) {
-      throw new ValidationException('Password does not match');
-    }
-
     const hashedPassword = await PasswordUtils.hashPassword(dto.password);
 
     const userData = {
@@ -160,13 +156,13 @@ export class AuthService {
     // Token rotation: rotate tokens (no sessionId)
     const rotated = JWTUtils.generateTokenPair(user.id, user.email, user.role);
 
-    // await this.tokenRepository.createRefreshToken({
-    //   token: rotated.refreshToken,
-    //   userId: user.id,
-    //   expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    // });
+    await this.tokenRepository.createRefreshToken({
+      token: rotated.refreshToken,
+      userId: user.id,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
 
-    //await this.tokenRepository.revokeToken(dto.refreshToken);
+    await this.tokenRepository.revokeToken(dto.refreshToken);
 
     return {
       user: {

@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
+import path from 'path';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -8,7 +9,7 @@ import { DatabaseService } from './database/connection';
 import route from './routes';
 
 const app = express();
-const server = require('http').createServer(app);
+
 config();
 
 // Security headers
@@ -69,7 +70,6 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   // Xử lý preflight requests (OPTIONS)
   if (req.method === 'OPTIONS') {
     res.sendStatus(200);
-    return;
   }
   next();
 });
@@ -78,58 +78,48 @@ app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Initialize application
-async function startServer() {
-  try {
-    // Connect to database
-    console.log('Connecting to database...');
-    await DatabaseService.connect();
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-    // Run migrations
-    console.log('Running migrations...');
-    await DatabaseService.runMigrations();
+// Connect to database
+DatabaseService.connect()
+  .then(() => DatabaseService.runMigrations())
+  .catch(console.error);
 
-    // Routes
-    route(app);
+// Routes
+route(app);
 
-    // Global error handler
-    app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-      console.error('Global error handler:', err);
+// Global error handler
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  console.error('Global error handler:', err);
 
-      if (err.message === 'Not allowed by CORS') {
-        return res.status(403).json({
-          success: false,
-          message: 'CORS error: Origin not allowed',
-          code: 'CORS_ERROR',
-        });
-      }
-
-      return res.status(500).json({
-        status: 'error',
-        message: 'Internal Server Error',
-        code: 'INTERNAL_ERROR',
-        timestamp: new Date().toISOString(),
-      });
+  if (err.message === 'Not allowed by CORS') {
+    return res.status(403).json({
+      success: false,
+      message: 'CORS error: Origin not allowed',
+      code: 'CORS_ERROR',
     });
-
-    // 404 handler
-    app.use((req: Request, res: Response) => {
-      res.status(404).json({
-        success: false,
-        message: 'API endpoint not found',
-        code: 'NOT_FOUND',
-      });
-    });
-
-    const PORT = process.env.PORT || 3001;
-
-    server.listen(PORT, () => {
-      console.log(`server is running on port ${PORT}`);
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
   }
-}
 
-startServer();
+  return res.status(500).json({
+    status: 'error',
+    message: 'Internal Server Error',
+    code: 'INTERNAL_ERROR',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// 404 handler
+// app.use('/api/*', (req: Request, res: Response) => {
+//   res.status(404).json({
+//     success: false,
+//     message: 'API endpoint not found',
+//     code: 'NOT_FOUND',
+//   });
+// });
+
+const PORT = process.env.PORT || 3001;
+
+app.listen(PORT, () => {
+  console.log(`server is running on port ${PORT}`);
+});
