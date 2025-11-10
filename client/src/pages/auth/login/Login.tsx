@@ -1,16 +1,22 @@
 // Login.tsx
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
-// axios type removed
-import { useAuth } from '../../../hooks/api/useAuth'
-// Removed login rate limiting
-import { LoginCredentials } from '../../../types/auth.types'
+import { useDispatch, useSelector } from 'react-redux'
+import { AppDispatch, RootState } from '../../../stores/stores'
+import {
+  clearLoginError,
+  clearLoginFieldError,
+  loginUser,
+} from '../../../stores/slices/authSlice'
+import type { LoginCredentials } from '../../../types/auth.types'
 import '../../../styles/components/login-security.css'
 import './Login.css'
-// removed unused ApiErrorResponse
+import Alert from '../../../components/common/Alert/Alert'
+import Input from '../../../components/common/Input/Input'
+import Button from '../../../components/common/Button/Button'
 
 // Validation schema
 const loginSchema = yup.object({
@@ -31,10 +37,18 @@ type LoginFormData = yup.InferType<typeof loginSchema>
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false)
-  const [loginError, setLoginError] = useState<string | null>(null)
   const navigate = useNavigate()
   const location = useLocation()
-  const { login, isLoading, error, clearError } = useAuth()
+  const dispatch = useDispatch<AppDispatch>()
+  const { isLoading: sessionLoading } = useSelector(
+    (state: RootState) => state.auth.session
+  )
+  const {
+    isLoading: loginLoading,
+    error: loginError,
+    fieldErrors,
+    lastAttempt,
+  } = useSelector((state: RootState) => state.auth.login)
 
   // Security features removed: no rate limiting / lockout
 
@@ -43,6 +57,7 @@ const Login = () => {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
+    setValue,
   } = useForm<LoginFormData>({
     resolver: yupResolver(loginSchema),
     defaultValues: {
@@ -56,46 +71,55 @@ const Login = () => {
   // Watch rememberMe for potential future use
   // const rememberMe = watch('rememberMe')
 
+  useEffect(() => {
+    if (lastAttempt) {
+      setValue('email', lastAttempt.email, { shouldDirty: true })
+      setValue('password', lastAttempt.password, { shouldDirty: true })
+      setValue('rememberMe', lastAttempt.rememberMe ?? false, { shouldDirty: true })
+    }
+  }, [lastAttempt, setValue])
+
   const togglePassword = useCallback(() => {
     setShowPassword(prev => !prev)
   }, [])
 
   // Clear error when user starts typing
-  const handleInputChange = useCallback(() => {
-    if (error) {
-      clearError()
-    }
-    if (loginError) {
-      setLoginError(null)
-    }
-  }, [error, clearError, loginError, setLoginError])
+  const handleInputChange = useCallback(
+    (field?: keyof LoginFormData) => {
+      if (loginError) {
+        dispatch(clearLoginError())
+      }
+      if (field) {
+        dispatch(clearLoginFieldError(field))
+      }
+    },
+    [dispatch, loginError]
+  )
 
   // Submit handler without client-side rate limiting
   const onSubmit = useCallback(
     async (data: LoginFormData) => {
       try {
-        // Clear any existing error
-        setLoginError(null)
+        dispatch(clearLoginError())
 
-        const credentials = {
+        const credentials: LoginCredentials = {
           email: data.email,
           password: data.password,
-        } as LoginCredentials
+          rememberMe: data.rememberMe,
+        }
 
-        await login(credentials)
+        await dispatch(loginUser(credentials)).unwrap()
 
         // Redirect to home or intended pages
         const redirectTo = location.state?.from?.pathname || '/'
         navigate(redirectTo)
-      } catch{
-        // console.error('Login error:', err)
-        // Always show a clear, user-friendly message and keep inputs intact
-    
-        setLoginError('Invalid email or password.')
-        return
+      } catch (err) {
+        if (err instanceof Error) {
+          // Optional: log error
+        }
       }
     },
-    [login, navigate, location.state]
+    [dispatch, navigate, location.state]
   )
 
   // Handle form submission with loading state
@@ -160,9 +184,11 @@ const Login = () => {
               </div>
 
               {loginError && (
-                <div className="login-form__error" role="alert">
-                  {loginError}
-                </div>
+                <Alert
+                  type="error"
+                  message={loginError}
+                  onClose={() => dispatch(clearLoginError())}
+                />
               )}
 
               {/* Security status display removed */}
@@ -172,80 +198,58 @@ const Login = () => {
                 onSubmit={handleFormSubmit}
                 noValidate
               >
-                <div className="form-field">
-                  <label htmlFor="email">Email</label>
-                  <div className="input-group">
-                    <input
-                      id="email"
-                      type="email"
-                      placeholder="you@example.com"
-                      autoComplete="email"
-                      {...register('email', {
-                        onChange: handleInputChange,
-                      })}
-                      aria-invalid={errors.email ? 'true' : 'false'}
-                      aria-describedby={
-                        errors.email ? 'email-error' : undefined
-                      }
-                      className={errors.email ? 'input-error' : ''}
-                    />
-                  </div>
-                  {errors.email && (
-                    <div
-                      id="email-error"
-                      className="form-field__error"
-                      role="alert"
-                    >
-                      {errors.email.message}
-                    </div>
-                  )}
-                </div>
+                <Input
+                  label="Email"
+                  type="email"
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  tone="dark"
+                  {...register('email', {
+                    onChange: () => handleInputChange('email'),
+                  })}
+                  error={errors.email?.message || fieldErrors.email}
+                  icon={
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                      <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                    </svg>
+                  }
+                />
 
-                <div className="form-field">
-                  <label htmlFor="password">Password</label>
-                  <div className="input-group">
-                    <input
-                      id="password"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Enter your password"
-                      autoComplete="current-password"
-                      {...register('password', {
-                        onChange: handleInputChange,
-                      })}
-                      aria-invalid={errors.password ? 'true' : 'false'}
-                      aria-describedby={
-                        errors.password ? 'password-error' : undefined
-                      }
-                      className={errors.password ? 'input-error' : ''}
-                    />
+                <Input
+                  label="Password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                  tone="dark"
+                  {...register('password', {
+                    onChange: () => handleInputChange('password'),
+                  })}
+                  error={errors.password?.message || fieldErrors.password}
+                  icon={
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                    </svg>
+                  }
+                  rightButton={
                     <button
                       type="button"
-                      className="input-group__toggle"
+                      className="password-toggle"
                       onClick={togglePassword}
-                      aria-label={
-                        showPassword ? 'Hide password' : 'Show password'
-                      }
                       tabIndex={-1}
                     >
                       {showPassword ? 'Hide' : 'Show'}
                     </button>
-                  </div>
-                  {errors.password && (
-                    <div
-                      id="password-error"
-                      className="form-field__error"
-                      role="alert"
-                    >
-                      {errors.password.message}
-                    </div>
-                  )}
-                </div>
+                  }
+                />
 
                 <div className="form-row">
                   <label className="checkbox">
                     <input
                       type="checkbox"
-                      {...register('rememberMe')}
+                      {...register('rememberMe', {
+                        onChange: () => handleInputChange(),
+                      })}
                       aria-describedby="remember-me-description"
                     />
                     <span>Remember me</span>
@@ -255,23 +259,18 @@ const Login = () => {
                   </a>
                 </div>
 
-                <button
+                <Button
                   type="submit"
-                  className="btn-primary"
-                  disabled={isLoading || isSubmitting}
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  loading={loginLoading || sessionLoading || isSubmitting}
                   aria-describedby="login-button-description"
                 >
-                  {isLoading || isSubmitting ? (
-                    <>
-                      <span className="spinner" aria-hidden="true" />
-                      <span>Signing in...</span>
-                    </>
-                  ) : (
-                    'Sign in'
-                  )}
-                </button>
+                  Sign in
+                </Button>
                 <div id="login-button-description" className="sr-only">
-                  {isLoading || isSubmitting
+                  {loginLoading || sessionLoading || isSubmitting
                     ? 'Please wait while we sign you in'
                     : 'Click to sign in to your account'}
                 </div>

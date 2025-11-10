@@ -1,6 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '@/services/auth.service';
-import { BaseException, ErrorHandler, ValidationException } from '@/exceptions/auth.exceptions';
+import {
+  BaseException,
+  ErrorHandler,
+  UserAlreadyExistsException,
+  UserNotFoundException,
+  ValidationException,
+} from '@/exceptions/auth.exceptions';
 import {
   ChangePasswordInput,
   LoginInput,
@@ -283,7 +289,6 @@ export class AuthController {
       readableStream.push(fileBuffer);
       readableStream.push(null);
       readableStream.pipe(stream);
-      
     } catch (error) {
       console.error('Upload error:', error);
       next(error);
@@ -335,6 +340,12 @@ export class AuthController {
     next: NextFunction
   ): Promise<void | Response> {
     const { email } = req.body;
+
+    const user = await this.userService.findUserByEmail(email);
+
+    if (user) {
+      throw new UserAlreadyExistsException('User with this email already exists');
+    }
 
     await this.emailService.sendVerificationCode(email);
 

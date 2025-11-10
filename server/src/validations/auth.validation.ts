@@ -51,6 +51,7 @@ export const AuthResponseSchema = z.object({
     lastName: z.string().nullable(),
     avatar: z.string().nullable(),
     role: z.string(),
+    rankingPoints: z.number(),
     status: z.string(),
     createdAt: z.string(),
   }),

@@ -1,12 +1,14 @@
 export interface User {
   id: string
   email: string
-  firstname: string
-  lastname: string
+  firstname: string | null
+  lastname: string | null
   role: string
-  avatarUrl?: string
+  avatarUrl?: string | null
+  rankingPoints?: number
+  status?: string
   createdAt: string
-  lastLoginAt: string
+  lastLoginAt?: string
 }
 
 export interface LoginCredentials {
@@ -30,12 +32,6 @@ export interface AuthTokens {
   expiresAt: number
 }
 
-export interface AuthState {
-  user: User | null
-  isLoading: boolean
-  isAuthenticated: boolean
-}
-
 export interface AuthResponse {
   accessToken: string
   user: User
@@ -43,17 +39,4 @@ export interface AuthResponse {
 
 export interface UpdateProfileData {
   user: User
-}
-
-export interface AuthContextType extends AuthState {
-  user: User | null
-  isAuthenticated: boolean
-  isLoading: boolean
-  error?: Error | null
-  login: (credentials: LoginCredentials) => Promise<void>
-  register: (data: RegisterData) => Promise<void>
-  logout: () => Promise<void>
-  refreshAuth: () => Promise<void>
-  clearError: () => void
-  hasRole: (role: string) => boolean
 }
