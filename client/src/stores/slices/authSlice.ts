@@ -297,10 +297,20 @@ const authSlice = createSlice({
       })
 
     // Logout
-    builder.addCase(logoutUser.fulfilled, state => {
-      state.session = initialSessionState
-      state.login = initialLoginState
-    })
+    builder
+      .addCase(logoutUser.pending, state => {
+        state.session.isLoading = true
+      })
+      .addCase(logoutUser.fulfilled, state => {
+        // Reset to initial state but set isLoading to false to allow redirect
+        state.session = { ...initialSessionState, isLoading: false }
+        state.login = initialLoginState
+      })
+      .addCase(logoutUser.rejected, state => {
+        // Even if logout fails, clear auth state and allow redirect
+        state.session = { ...initialSessionState, isLoading: false }
+        state.login = initialLoginState
+      })
 
     // Send OTP
     builder
