@@ -84,11 +84,17 @@ export class EMailService {
 
     if (new Date() > otpData.expires) {
       otpStore.delete(email);
-
       throw new ValidationException('OTP has expired');
     }
 
     const isValid = otpData.otp === providedOTP;
+
+    if (!isValid) {
+      otpStore.delete(email);
+      throw new ValidationException('Invalid OTP');
+    } else {
+      otpStore.set(email, otpData);
+    }
 
     return isValid;
   }

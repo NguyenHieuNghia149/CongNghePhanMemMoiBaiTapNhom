@@ -127,6 +127,24 @@ export const loginUser = createAsyncThunk<
   }
 })
 
+export const loginWithGoogle = createAsyncThunk<
+  User,
+  string,
+  { rejectValue: ErrorPayload }
+>('auth/loginWithGoogle', async (idToken, { rejectWithValue }) => {
+  try {
+    const { user } = await authService.loginWithGoogle(idToken)
+    return user
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return rejectWithValue({ message: error.message })
+    }
+    return rejectWithValue({
+      message: error instanceof Error ? error.message : 'Google login failed',
+    })
+  }
+})
+
 export const logoutUser = createAsyncThunk<void>('auth/logout', async () => {
   await authService.logout()
 })
@@ -257,6 +275,25 @@ const authSlice = createSlice({
           state.login.fieldErrors = action.payload.fieldErrors
         }
         state.login.lastAttempt = action.meta.arg
+      })
+
+    // Login with Google
+    builder
+      .addCase(loginWithGoogle.pending, state => {
+        state.login.isLoading = true
+        state.login.error = null
+        state.session.isLoading = true
+      })
+      .addCase(loginWithGoogle.fulfilled, (state, action) => {
+        state.login.isLoading = false
+        state.session.user = action.payload
+        state.session.isAuthenticated = true
+        state.session.isLoading = false
+      })
+      .addCase(loginWithGoogle.rejected, (state, action) => {
+        state.login.isLoading = false
+        state.session.isLoading = false
+        state.login.error = action.payload?.message || 'Google login failed'
       })
 
     // Logout

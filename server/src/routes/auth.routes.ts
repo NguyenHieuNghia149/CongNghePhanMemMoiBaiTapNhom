@@ -15,6 +15,7 @@ import {
   ChangePasswordSchema,
   PasswordResetSchema,
   SendVerificationEmailSchema,
+  GoogleLoginSchema,
 } from '@/validations/auth.validation';
 import { upload } from '@/middlewares/upload.middleware';
 import { UserService } from '@/services/user.service';
@@ -42,6 +43,12 @@ router.post(
   validate(LoginSchema),
   authController.login.bind(authController)
 );
+router.post(
+  '/google',
+  authRateLimit,
+  validate(GoogleLoginSchema),
+  authController.googleLogin.bind(authController)
+);
 router.post('/refresh-token', authRateLimit, authController.refreshToken.bind(authController));
 
 router.post('/logout', authController.logout.bind(authController));
@@ -54,7 +61,11 @@ router.post(
 );
 // Profile routes
 router.get('/me', authenticationToken, authController.getProfile.bind(authController));
-router.get('/profile/:userId', authenticationToken, authController.getProfileById.bind(authController));
+router.get(
+  '/profile/:userId',
+  authenticationToken,
+  authController.getProfileById.bind(authController)
+);
 router.put('/profile', authenticationToken, authController.updateProfile.bind(authController));
 router.post(
   '/profile/upload-avatar',

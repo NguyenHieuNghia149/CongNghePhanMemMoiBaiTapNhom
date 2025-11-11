@@ -5,6 +5,7 @@ import {
   RefreshTokenInput,
   RegisterInput,
   RegisterResponseSchema,
+  GoogleLoginInput,
 } from '@/validations/auth.validation';
 import { TokenRepository } from '@/repositories/token.repository';
 import { UserRepository } from '@/repositories/user.repository';
@@ -17,17 +18,23 @@ import {
   ValidationException,
 } from '@/exceptions/auth.exceptions';
 import { Request } from 'express';
+import { OAuth2Client } from 'google-auth-library';
 import { EStatus } from '@/enums/EStatus';
 import { EMailService, otpStore } from './email.service';
+import { EUserRole } from '@/enums/EUerRole';
 
 export class AuthService {
   private userRepository: UserRepository;
   private tokenRepository: TokenRepository;
   private emailService: EMailService;
+  private googleClient?: OAuth2Client;
   constructor() {
     this.userRepository = new UserRepository();
     this.tokenRepository = new TokenRepository();
     this.emailService = new EMailService();
+    if (process.env.GOOGLE_CLIENT_ID) {
+      this.googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    }
   }
 
   async register(dto: RegisterInput): Promise<RegisterResponseSchema> {
@@ -83,6 +90,86 @@ export class AuthService {
       //   refreshToken: tokens.refreshToken,
       //   expiresIn: tokens.expiresIn,
       // },
+    };
+  }
+
+  async loginWithGoogle(dto: GoogleLoginInput): Promise<AuthResponse> {
+    if (!this.googleClient) {
+      throw new ValidationException('Google login is not configured');
+    }
+
+    const ticket = await this.googleClient.verifyIdToken({
+      idToken: dto.idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      throw new ValidationException('Invalid Google token');
+    }
+
+    const email = payload.email;
+    // const emailVerified = payload.email_verified;
+    // if (!emailVerified) {
+    //   throw new ValidationException('Google account email is not verified');
+    // }
+
+    const firstName = (payload.given_name as string) || '';
+    const lastName = (payload.family_name as string) || '';
+    const avatar = (payload.picture as string) || null;
+
+    let user = await this.userRepository.findByEmail(email);
+
+    if (!user) {
+      user = await this.userRepository.createUser({
+        email,
+        password: await PasswordUtils.hashPassword(
+          Math.random().toString(36).slice(2) + Date.now().toString()
+        ),
+        firstName,
+        lastName,
+        avatar,
+        status: EStatus.ACTIVE,
+        role: EUserRole.USER,
+      } as any);
+    } else {
+      if (avatar && user.avatar !== avatar) {
+        await this.userRepository.updateUser(user.id, { avatar });
+        user = { ...user, avatar } as any;
+      }
+    }
+
+    if (!user) {
+      throw new ValidationException('Unable to create or load user');
+    }
+
+    const u = user as NonNullable<typeof user>;
+    await this.userRepository.updateLastLogin(u.id);
+
+    const tokens = JWTUtils.generateTokenPair(u.id, u.email, u.role);
+    await this.tokenRepository.createRefreshToken({
+      token: tokens.refreshToken,
+      userId: u.id,
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+
+    return {
+      user: {
+        id: u.id,
+        email: u.email,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        avatar: u.avatar,
+        role: u.role,
+        rankingPoints: u.rankingPoints,
+        status: u.status,
+        createdAt: u.createdAt.toISOString(),
+      },
+      tokens: {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        expiresIn: tokens.expiresIn,
+      },
     };
   }
 
@@ -198,35 +285,6 @@ export class AuthService {
   async cleanupExpiredTokens(): Promise<void> {
     await this.tokenRepository.cleanupExpiredTokens();
   }
-
-  // async sendVerificationCode(email: string, req: Request): Promise<void> {
-  //   const rateLimitKey = `sendVeriCode:${req.ip}`;
-  //   const rateLimit = RateLimitUtils.checkRateLimit(rateLimitKey, 20, 15 * 60 * 1000);
-  //   if (!rateLimit.allowed) {
-  //     throw new RateLimitExceededException();
-  //   }
-
-  //   const user = await this.userRepository.findByEmail(email);
-
-  //   if (!user) {
-  //     throw new InvalidCredentialsException("User with this email doesn't exist");
-  //   }
-
-  //   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-  //   otpStore.set(email, {
-  //     otp,
-  //     expires: new Date(Date.now() + 10 * 60 * 1000),
-  //     userData: { email },
-  //   });
-
-  //   await transporter.sendMail({
-  //     from: process.env.EMAIL,
-  //     to: email,
-  //     subject: 'Your Verification Code',
-  //     text: `Your verification code is ${otp}. It will expire in 10 minutes.`,
-  //   });
-  // }
 
   async resetPassword(email: string, newPassword: string, otp: string): Promise<void> {
     const isOTPValid = await this.emailService.verifyOTP(email, otp!);

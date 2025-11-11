@@ -1,3 +1,4 @@
+import { UserInsert } from '@/database/schema/user';
 import { InvalidCredentialsException, ValidationException } from '@/exceptions/auth.exceptions';
 import { TokenRepository } from '@/repositories/token.repository';
 import { UserRepository } from '@/repositories/user.repository';
@@ -48,7 +49,7 @@ export class UserService {
       firstName: updateData.firstName,
       lastName: updateData.lastName,
       gender: updateData.gender,
-      avatar: updateData.avatar
+      avatar: updateData.avatar,
     };
 
     // Convert dateOfBirth from ISO string to Date if provided
@@ -114,5 +115,9 @@ export class UserService {
 
   async updatePassword(userId: string, newHashedPassword: string): Promise<void> {
     await this.userRepository.updatePassword(userId, newHashedPassword);
+  }
+
+  async create(userData: UserInsert) {
+    return this.userRepository.create(userData);
   }
 }

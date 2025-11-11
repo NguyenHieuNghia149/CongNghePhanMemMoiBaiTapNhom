@@ -9,6 +9,7 @@ import {
 } from '@/exceptions/auth.exceptions';
 import {
   ChangePasswordInput,
+  GoogleLoginInput,
   LoginInput,
   RefreshTokenInput,
   RegisterInput,
@@ -19,6 +20,9 @@ import { PasswordUtils } from '@/utils/security';
 import { fa } from 'zod/v4/locales';
 import cloudinary from '@/config/cloudinary';
 import { Readable } from 'stream';
+import { OAuth2Client } from 'google-auth-library';
+import { EStatus } from '@/enums/EStatus';
+import { EUserRole } from '@/enums/EUerRole';
 // Removed session revoke validation
 
 export class AuthController {
@@ -29,7 +33,6 @@ export class AuthController {
   ) {}
 
   async register(req: Request, res: Response, next: NextFunction) {
-    console.log(req.body);
     const result = await this.authService.register(req.body as RegisterInput);
 
     console.log(result);
@@ -53,6 +56,30 @@ export class AuthController {
     });
   }
 
+  async googleLogin(req: Request, res: Response, next: NextFunction) {
+    const result = await this.authService.loginWithGoogle(req.body as GoogleLoginInput);
+
+    res.cookie('refreshToken', result.tokens.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      path: '/api/auth/refresh-token',
+    });
+
+    const { refreshToken, ...tokensWithoutRefresh } = result.tokens;
+
+    res.status(200).json({
+      success: true,
+      message: 'Login with Google successful',
+      data: {
+        user: result.user,
+        tokens: tokensWithoutRefresh,
+      },
+    });
+  }
+
+  // legacy google handler removed in favor of googleLogin above
   // Removed revokeSession handler
 
   async login(req: Request, res: Response, next: NextFunction) {

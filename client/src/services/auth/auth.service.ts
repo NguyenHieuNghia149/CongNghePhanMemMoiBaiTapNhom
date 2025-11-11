@@ -110,6 +110,23 @@ export class AuthService {
     }
   }
 
+  async loginWithGoogle(idToken: string): Promise<AuthResponse> {
+    try {
+      console.log('idToken', idToken)
+      const response = await apiClient.post('/auth/google', { idToken })
+      const data = response.data?.data ?? {}
+      const accessToken: string = data.tokens?.accessToken || data.accessToken
+      const user: User = data.user
+      if (!accessToken || !user) {
+        throw new Error('Invalid login response')
+      }
+      tokenManager.setAccessToken(accessToken)
+      return { accessToken, user }
+    } catch (error) {
+      this.handleApiError(error, 'Google login failed')
+    }
+  }
+
   async register(data: RegisterData): Promise<AuthResponse> {
     try {
       const response = await apiClient.post<AuthResponse>(

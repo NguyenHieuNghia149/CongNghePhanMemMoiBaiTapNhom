@@ -17,6 +17,9 @@ import './Login.css'
 import Alert from '../../../components/common/Alert/Alert'
 import Input from '../../../components/common/Input/Input'
 import Button from '../../../components/common/Button/Button'
+import GoogleButton from '../../../components/auth/GoogleButton/GoogleButton'
+import { googleAuthService } from '../../../services/auth/googleAuth.service'
+import { loginWithGoogle } from '../../../stores/slices/authSlice'
 
 // Validation schema
 const loginSchema = yup.object({
@@ -181,6 +184,27 @@ const Login = () => {
               <div className="login-form__header">
                 <h2>Welcome back</h2>
                 <p>Sign in to continue your coding journey</p>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <GoogleButton
+                  onSuccess={credential => {
+                    dispatch(loginWithGoogle(credential))
+                  }}
+                  onError={() => {
+                    // Fallback: try One Tap prompt
+                    googleAuthService.initGoogleAuth()
+                    googleAuthService
+                      .signInWithGoogle()
+                      .then(c => dispatch(loginWithGoogle(c)))
+                      .catch(() => {
+                        // no-op
+                      })
+                  }}
+                  text="continue_with"
+                  theme="filled_blue"
+                  size="large"
+                />
               </div>
 
               {loginError && (
