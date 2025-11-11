@@ -73,7 +73,7 @@ export const PasswordResetSchema = z.object({
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
       'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
     ),
-  opt: z.string().min(1, 'OTP is required'),
+  otp: z.string().min(6, 'OTP must be 6 digits'),
 });
 
 export type PasswordResetInput = z.infer<typeof PasswordResetSchema>;

@@ -90,12 +90,6 @@ export class EMailService {
 
     const isValid = otpData.otp === providedOTP;
 
-    if (isValid) {
-      otpStore.delete(email);
-    } else {
-      otpStore.set(email, otpData);
-    }
-
     return isValid;
   }
 }

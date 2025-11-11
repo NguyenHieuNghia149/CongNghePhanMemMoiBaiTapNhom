@@ -77,12 +77,18 @@ router.post(
   authController.sendVerificationCode.bind(authController)
 );
 
-// Removed revoke-session route
+router.post(
+  '/send-reset-otp',
+  authRateLimit,
+  authController.sendResetOTP.bind(authController)
+);
 
-// Route kiểm tra trạng thái xác thực
-// router.get('/me', authenticationToken, (req: any, res) => {
-//   res.status(200).json({ user: req.user });
-// });
+router.post(
+  '/verify-otp',
+  authRateLimit,
+  authController.verifyOTP.bind(authController)
+);
+
 
 router.get('/health', authRateLimit, (req, res) => {
   res.json({ status: 'ok' });

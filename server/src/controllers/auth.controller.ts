@@ -355,9 +355,44 @@ export class AuthController {
     });
   }
 
+  async sendResetOTP(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
+    const { email } = req.body;
+
+    const user = await this.userService.findUserByEmail(email);
+
+    if (!user) {
+      throw new UserNotFoundException('User with this email does not exist');
+    }
+
+    await this.emailService.sendVerificationCode(email);
+
+    res.status(200).json({
+      success: true,
+      message: 'Reset OTP sent to your email.',
+    });
+  }
+
+  async verifyOTP(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
+    const { email, otp } = req.body;
+
+    const isValid = await this.emailService.verifyOTP(email, otp);
+
+    if (!isValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid OTP',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'OTP verified successfully',
+    });
+  }
+
   async resetPassword(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     const { email, otp, newPassword } = req.body;
-    await this.authService.resetPassword(email, otp, newPassword);
+    await this.authService.resetPassword(email, newPassword, otp);
 
     res.status(200).json({
       success: true,
