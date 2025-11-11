@@ -34,8 +34,6 @@ export class AuthController {
 
   async register(req: Request, res: Response, next: NextFunction) {
     const result = await this.authService.register(req.body as RegisterInput);
-
-    console.log(result);
     // res.cookie('refreshToken', result.tokens.refreshToken, {
     //   httpOnly: true,
     //   secure: process.env.NODE_ENV === 'production',
@@ -91,7 +89,6 @@ export class AuthController {
         message: 'User with this email does not exist',
       });
     }
-    console.log(result);
 
     res.cookie('refreshToken', result.tokens.refreshToken, {
       httpOnly: true,
@@ -283,7 +280,6 @@ export class AuthController {
         },
         async (error: any, result?: any) => {
           if (error || !result) {
-            console.error('Cloudinary upload error:', error);
             return res.status(500).json({
               success: false,
               message: 'Failed to upload image',
@@ -301,7 +297,6 @@ export class AuthController {
               data: profile,
             });
           } catch (error) {
-            console.error('Profile update error:', error);
             return res.status(500).json({
               success: false,
               message: 'Failed to update profile',
@@ -317,7 +312,6 @@ export class AuthController {
       readableStream.push(null);
       readableStream.pipe(stream);
     } catch (error) {
-      console.error('Upload error:', error);
       next(error);
     }
   }
@@ -349,9 +343,6 @@ export class AuthController {
         timestamp: errorResponse.timestamp,
       });
     }
-
-    // Log unexpected errors
-    console.error('Unexpected error:', error);
 
     res.status(500).json({
       success: false,

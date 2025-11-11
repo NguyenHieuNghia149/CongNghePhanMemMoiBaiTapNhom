@@ -60,12 +60,9 @@ export class UserService {
           throw new Error('Invalid date format');
         }
       } catch (error) {
-        console.error('Error parsing date:', error);
         throw new Error('Invalid date format for dateOfBirth');
       }
     }
-
-    console.log('Updating user profile with data:', dataToUpdate);
 
     try {
       const user = await this.userRepository.updateUser(userId, dataToUpdate);
@@ -83,7 +80,6 @@ export class UserService {
         updatedAt: user.updatedAt,
       };
     } catch (error) {
-      console.error('Error updating user profile:', error);
       throw error;
     }
   }

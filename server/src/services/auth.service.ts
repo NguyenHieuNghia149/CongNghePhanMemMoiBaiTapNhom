@@ -72,8 +72,6 @@ export class AuthService {
     //   expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     // });
 
-    console.log('User registered:', user);
-
     return {
       user: {
         id: user.id,
