@@ -11,6 +11,7 @@ interface GoogleButtonProps {
   width?: number
   logo_alignment?: 'left' | 'center'
   disabled?: boolean
+  variant?: 'default' | 'modern' | 'minimal'
 }
 
 const GoogleButton: React.FC<GoogleButtonProps> = ({
@@ -22,68 +23,180 @@ const GoogleButton: React.FC<GoogleButtonProps> = ({
   width,
   logo_alignment = 'left',
   disabled = false,
+  variant = 'modern',
 }) => {
   const buttonRef = useRef<HTMLDivElement>(null)
+  const customButtonRef = useRef<HTMLButtonElement>(null)
+  const [isGoogleLoaded, setIsGoogleLoaded] = React.useState(false)
 
+  // Render native Google button (hidden when using custom variant)
   useEffect(() => {
-    if (!buttonRef.current || disabled) return
+    if (disabled) return
 
     googleAuthService.initGoogleAuth()
 
     const timer = setTimeout(() => {
-      if (buttonRef.current && window.google) {
-        googleAuthService.renderGoogleButton(
-          buttonRef.current,
-          onSuccess,
-          onError || ((err: Error) => console.error(err))
-        )
+      if (buttonRef.current && window.google?.accounts?.id) {
+        setIsGoogleLoaded(true)
+        
+        try {
+          const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+          if (!clientId) {
+            onError?.(new Error('Google Client ID not configured'))
+            return
+          }
 
-        window.google.accounts.id.renderButton(buttonRef.current, {
-          theme,
-          size,
-          text,
-          width: width || buttonRef.current.offsetWidth,
-          logo_alignment,
-        })
+          window.google.accounts.id.initialize({
+            client_id: clientId,
+            callback: (response: { credential: string }) => {
+              if (response.credential) {
+                onSuccess(response.credential)
+              } else {
+                onError?.(new Error('No credential received'))
+              }
+            },
+          })
+
+          // Always render the native button (even if hidden) so it can be triggered
+          window.google.accounts.id.renderButton(buttonRef.current, {
+            theme,
+            size,
+            text,
+            width: width || buttonRef.current.offsetWidth || 300,
+            logo_alignment,
+          })
+        } catch (err) {
+          setIsGoogleLoaded(false)
+          onError?.(err as Error)
+        }
       }
-    }, 300)
+    }, 500) // Increased delay to ensure Google API is loaded
 
     return () => clearTimeout(timer)
   }, [onSuccess, onError, text, theme, size, width, logo_alignment, disabled])
 
+  const getButtonText = () => {
+    switch (text) {
+      case 'signin_with':
+        return 'Sign in with Google'
+      case 'signup_with':
+        return 'Sign up with Google'
+      case 'signin':
+        return 'Sign in'
+      default:
+        return 'Continue with Google'
+    }
+  }
+
+  const GoogleIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M19.9895 10.1871C19.9895 9.36767 19.9214 8.76973 19.7742 8.14966H10.1992V11.848H15.8195C15.7062 12.7671 15.0943 14.1512 13.7346 15.0813L13.7155 15.2051L16.7429 17.4969L16.9527 17.5174C18.8789 15.7789 19.9895 13.221 19.9895 10.1871Z"
+        fill="#4285F4"
+      />
+      <path
+        d="M10.1993 19.9313C12.9527 19.9313 15.2643 19.0454 16.9527 17.5174L13.7346 15.0813C12.8734 15.6682 11.7176 16.0779 10.1993 16.0779C7.50243 16.0779 5.21352 14.3395 4.39759 11.9366L4.27799 11.9465L1.13003 14.3273L1.08887 14.4391C2.76588 17.6945 6.21061 19.9313 10.1993 19.9313Z"
+        fill="#34A853"
+      />
+      <path
+        d="M4.39748 11.9366C4.18219 11.3166 4.05759 10.6521 4.05759 9.96565C4.05759 9.27909 4.18219 8.61473 4.38615 7.99466L4.38045 7.8626L1.19304 5.44366L1.08875 5.49214C0.397576 6.84305 0.000976562 8.36008 0.000976562 9.96565C0.000976562 11.5712 0.397576 13.0882 1.08875 14.4391L4.39748 11.9366Z"
+        fill="#FBBC05"
+      />
+      <path
+        d="M10.1993 3.85336C12.1142 3.85336 13.406 4.66168 14.1425 5.33717L17.0207 2.59107C15.253 0.985496 12.9527 0 10.1993 0C6.2106 0 2.76588 2.23672 1.08887 5.49214L4.38626 7.99466C5.21352 5.59183 7.50242 3.85336 10.1993 3.85336Z"
+        fill="#EB4335"
+      />
+    </svg>
+  )
+
   if (disabled) {
     return (
-      <button className="google-button-custom google-button-custom--disabled" disabled>
-        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-          <path
-            fill="#4285F4"
-            d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"
-          />
-          <path
-            fill="#34A853"
-            d="M9.003 18c2.43 0 4.467-.806 5.956-2.18L12.05 13.56c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z"
-          />
-          <path
-            fill="#FBBC05"
-            d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.96H.957C.347 6.175 0 7.55 0 9.002c0 1.452.348 2.827.957 4.042l3.007-2.332z"
-          />
-          <path
-            fill="#EA4335"
-            d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.428 0 9.002 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z"
-          />
-        </svg>
-        <span>Continue with Google</span>
+      <button
+        className={`google-button google-button--disabled google-button--${variant}`}
+        disabled
+      >
+        <GoogleIcon />
+        <span>{getButtonText()}</span>
       </button>
     )
   }
 
   return (
     <div className="google-button-container">
-      <div ref={buttonRef} className="google-button-wrapper" />
+      {/* Native Google Button (hidden when using custom variant) */}
+      <div 
+        ref={buttonRef} 
+        className={`google-button-native ${variant !== 'default' ? 'google-button-native--hidden' : ''}`}
+        style={{ opacity: isGoogleLoaded && variant === 'default' ? 1 : 0 }}
+      />
+
+      {/* Custom Modern Button */}
+      {variant !== 'default' && (
+        <button
+          ref={customButtonRef}
+          className={`google-button google-button--${variant} google-button--${theme}`}
+          onClick={async () => {
+            try {
+              // Wait for Google API and native button to be ready
+              await new Promise<void>((resolve, reject) => {
+                if (window.google?.accounts?.id && isGoogleLoaded) {
+                  resolve()
+                  return
+                }
+                
+                const maxWait = 5000
+                const startTime = Date.now()
+                const checkInterval = setInterval(() => {
+                  if (window.google?.accounts?.id && isGoogleLoaded) {
+                    clearInterval(checkInterval)
+                    resolve()
+                  } else if (Date.now() - startTime > maxWait) {
+                    clearInterval(checkInterval)
+                    const currentOrigin = window.location.origin
+                    reject(new Error(
+                      `Google API failed to load. ` +
+                      `Please ensure "${currentOrigin}" is added to Authorized JavaScript origins in Google Cloud Console. ` +
+                      `Also check that VITE_GOOGLE_CLIENT_ID is set correctly in .env file.`
+                    ))
+                  }
+                }, 100)
+              })
+
+              // Trigger click on the native Google button
+              if (buttonRef.current) {
+                const nativeButton = buttonRef.current.querySelector('div[role="button"]') as HTMLElement
+                if (nativeButton) {
+                  nativeButton.click()
+                } else {
+                  // Fallback: try to find any clickable element in the native button container
+                  const clickableElement = buttonRef.current.querySelector('*') as HTMLElement
+                  if (clickableElement) {
+                    clickableElement.click()
+                  } else {
+                    throw new Error('Native Google button not found. Please refresh the page.')
+                  }
+                }
+              } else {
+                throw new Error('Button container not found')
+              }
+            } catch (err) {
+              const error = err instanceof Error 
+                ? err 
+                : new Error('Google sign-in failed. Please check your configuration and Google Cloud Console settings.')
+              onError?.(error)
+            }
+          }}
+          disabled={disabled || !isGoogleLoaded}
+          type="button"
+        >
+          <div className="google-button__icon">
+            <GoogleIcon />
+          </div>
+          <span className="google-button__text">{getButtonText()}</span>
+        </button>
+      )}
     </div>
   )
 }
 
 export default GoogleButton
-
-

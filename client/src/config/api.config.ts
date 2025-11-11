@@ -3,8 +3,3 @@ export const API_CONFIG = {
   timeout: 10000,
   withCredentials: true,
 } as const
-
-export const STORAGE_KEYS = {
-  USER: 'auth_user',
-  IS_AUTHENTICATED: 'auth_is_authenticated',
-} as const

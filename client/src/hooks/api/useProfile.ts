@@ -3,7 +3,7 @@ import {
   profileAPI,
   ProfileData,
   UpdateProfileData,
-} from '../../services/api/profile.api'
+} from '../../services/api/user.service'
 
 export const useProfile = (userId?: string) => {
   const [profile, setProfile] = useState<ProfileData | null>(null)
@@ -19,7 +19,6 @@ export const useProfile = (userId?: string) => {
         setProfile(response.data)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch profile')
-        console.error('Error fetching profile:', err)
       } finally {
         setLoading(false)
       }
@@ -49,7 +48,6 @@ export const useProfile = (userId?: string) => {
       setProfile(response.data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch profile')
-      console.error('Error fetching profile:', err)
     } finally {
       setLoading(false)
     }

@@ -21,16 +21,6 @@ export class AuthService {
 
   private handleApiError(error: unknown, defaultMessage: string): never {
     // Only log non-401 errors to avoid console spam when user is not logged in
-    if (typeof error === 'object' && error !== null && 'response' in error) {
-      const axiosError = error as {
-        response: { status: number }
-      }
-      if (axiosError.response?.status !== 401) {
-        //console.error('API Error details:', error)
-      }
-    } else {
-      //console.error('API Error details:', error)
-    }
 
     if (typeof error === 'object' && error !== null) {
       // Axios error with response
@@ -105,14 +95,12 @@ export class AuthService {
 
       return { accessToken, user }
     } catch (error) {
-      // console.error('Login error details:', error)
       this.handleApiError(error, 'Login failed')
     }
   }
 
   async loginWithGoogle(idToken: string): Promise<AuthResponse> {
     try {
-      console.log('idToken', idToken)
       const response = await apiClient.post('/auth/google', { idToken })
       const data = response.data?.data ?? {}
       const accessToken: string = data.tokens?.accessToken || data.accessToken

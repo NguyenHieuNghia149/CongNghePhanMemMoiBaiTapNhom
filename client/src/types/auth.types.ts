@@ -4,7 +4,6 @@ export interface User {
   firstname: string | null
   lastname: string | null
   role: string
-  avatarUrl?: string | null
   avatar?: string | null
   rankingPoints?: number
   status?: string

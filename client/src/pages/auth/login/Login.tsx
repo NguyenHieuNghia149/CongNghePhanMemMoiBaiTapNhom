@@ -1,4 +1,3 @@
-// Login.tsx
 import React, { useState, useCallback, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
@@ -10,16 +9,15 @@ import {
   clearLoginError,
   clearLoginFieldError,
   loginUser,
+  loginWithGoogle,
 } from '../../../stores/slices/authSlice'
 import type { LoginCredentials } from '../../../types/auth.types'
-import '../../../styles/components/login-security.css'
-import './Login.css'
 import Alert from '../../../components/common/Alert/Alert'
 import Input from '../../../components/common/Input/Input'
 import Button from '../../../components/common/Button/Button'
 import GoogleButton from '../../../components/auth/GoogleButton/GoogleButton'
 import { googleAuthService } from '../../../services/auth/googleAuth.service'
-import { loginWithGoogle } from '../../../stores/slices/authSlice'
+import './Login.css'
 
 // Validation schema
 const loginSchema = yup.object({
@@ -38,11 +36,12 @@ const loginSchema = yup.object({
 
 type LoginFormData = yup.InferType<typeof loginSchema>
 
-const Login = () => {
+const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const dispatch = useDispatch<AppDispatch>()
+  
   const { isLoading: sessionLoading } = useSelector(
     (state: RootState) => state.auth.session
   )
@@ -52,8 +51,6 @@ const Login = () => {
     fieldErrors,
     lastAttempt,
   } = useSelector((state: RootState) => state.auth.login)
-
-  // Security features removed: no rate limiting / lockout
 
   // Form handling with react-hook-form
   const {
@@ -68,11 +65,8 @@ const Login = () => {
       password: '',
       rememberMe: false,
     },
-    mode: 'onBlur', // Validate on blur for better UX
+    mode: 'onBlur',
   })
-
-  // Watch rememberMe for potential future use
-  // const rememberMe = watch('rememberMe')
 
   useEffect(() => {
     if (lastAttempt) {
@@ -86,7 +80,6 @@ const Login = () => {
     setShowPassword(prev => !prev)
   }, [])
 
-  // Clear error when user starts typing
   const handleInputChange = useCallback(
     (field?: keyof LoginFormData) => {
       if (loginError) {
@@ -99,7 +92,6 @@ const Login = () => {
     [dispatch, loginError]
   )
 
-  // Submit handler without client-side rate limiting
   const onSubmit = useCallback(
     async (data: LoginFormData) => {
       try {
@@ -113,19 +105,15 @@ const Login = () => {
 
         await dispatch(loginUser(credentials)).unwrap()
 
-        // Redirect to home or intended pages
         const redirectTo = location.state?.from?.pathname || '/'
         navigate(redirectTo)
-      } catch (err) {
-        if (err instanceof Error) {
-          // Optional: log error
-        }
+      } catch  {
+        // Error handled by Redux
       }
     },
     [dispatch, navigate, location.state]
   )
 
-  // Handle form submission with loading state
   const handleFormSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault()
@@ -134,6 +122,24 @@ const Login = () => {
     },
     [handleSubmit, onSubmit]
   )
+
+  const handleGoogleSuccess = useCallback(
+    (credential: string) => {
+      dispatch(loginWithGoogle(credential))
+    },
+    [dispatch]
+  )
+
+  const handleGoogleError = useCallback(() => {
+    // Fallback: try One Tap prompt
+    googleAuthService.initGoogleAuth()
+    googleAuthService
+      .signInWithGoogle()
+      .then(credential => dispatch(loginWithGoogle(credential)))
+      .catch(() => {
+        // Error handled by Redux
+      })
+  }, [dispatch])
 
   return (
     <div className="login-page">
@@ -145,6 +151,7 @@ const Login = () => {
 
       <div className="login-container">
         <div className="login-card">
+          {/* Hero Section */}
           <div className="login-card__left">
             <div className="login-hero">
               <div className="login-hero__content">
@@ -158,21 +165,16 @@ const Login = () => {
                 </p>
               </div>
               <div className="login-hero__image-wrapper">
-                {/* <img
-                  className="login-hero__image"
-                  src={heroImg}
-                  alt="Coding Illustration"
-                /> */}
+                {/* Add your image here */}
               </div>
             </div>
           </div>
 
+          {/* Form Section */}
           <div className="login-card__right">
             <div className="login-form-wrapper">
-              <div
-                className="form-row"
-                style={{ justifyContent: 'flex-start', marginBottom: 8 }}
-              >
+              {/* Back to Home Link */}
+              <div className="login-back-link">
                 <button
                   type="button"
                   className="link"
@@ -181,32 +183,34 @@ const Login = () => {
                   ← Back to Home
                 </button>
               </div>
+
+              {/* Header */}
               <div className="login-form__header">
                 <h2>Welcome back</h2>
                 <p>Sign in to continue your coding journey</p>
               </div>
 
-              <div style={{ marginBottom: 16 }}>
+              {/* Google Sign In Button */}
+              <div className="login-google-wrapper">
                 <GoogleButton
-                  onSuccess={credential => {
-                    dispatch(loginWithGoogle(credential))
-                  }}
-                  onError={() => {
-                    // Fallback: try One Tap prompt
-                    googleAuthService.initGoogleAuth()
-                    googleAuthService
-                      .signInWithGoogle()
-                      .then(c => dispatch(loginWithGoogle(c)))
-                      .catch(() => {
-                        // no-op
-                      })
-                  }}
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
                   text="continue_with"
-                  theme="filled_blue"
+                  variant="minimal"
+                  theme="filled_black"
                   size="large"
+                  disabled={loginLoading || sessionLoading}
                 />
               </div>
 
+              {/* Divider */}
+              <div className="login-divider">
+                <span className="login-divider__line" />
+                <span className="login-divider__text">Or continue with email</span>
+                <span className="login-divider__line" />
+              </div>
+
+              {/* Error Alert */}
               {loginError && (
                 <Alert
                   type="error"
@@ -215,13 +219,8 @@ const Login = () => {
                 />
               )}
 
-              {/* Security status display removed */}
-
-              <form
-                className="login-form"
-                onSubmit={handleFormSubmit}
-                noValidate
-              >
+              {/* Login Form */}
+              <form className="login-form" onSubmit={handleFormSubmit} noValidate>
                 <Input
                   label="Email"
                   type="email"
@@ -252,7 +251,11 @@ const Login = () => {
                   error={errors.password?.message || fieldErrors.password}
                   icon={
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                      <path
+                        fillRule="evenodd"
+                        d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   }
                   rightButton={
@@ -274,7 +277,6 @@ const Login = () => {
                       {...register('rememberMe', {
                         onChange: () => handleInputChange(),
                       })}
-                      aria-describedby="remember-me-description"
                     />
                     <span>Remember me</span>
                   </label>
@@ -289,18 +291,12 @@ const Login = () => {
                   size="lg"
                   fullWidth
                   loading={loginLoading || sessionLoading || isSubmitting}
-                  aria-describedby="login-button-description"
                 >
                   Sign in
                 </Button>
-                <div id="login-button-description" className="sr-only">
-                  {loginLoading || sessionLoading || isSubmitting
-                    ? 'Please wait while we sign you in'
-                    : 'Click to sign in to your account'}
-                </div>
 
                 <div className="form-footer">
-                  Don&apos;t have an account?{' '}
+                  Don't have an account?{' '}
                   <a className="link" href="/register">
                     Create one
                   </a>

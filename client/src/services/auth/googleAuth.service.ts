@@ -63,26 +63,37 @@ class GoogleAuthService {
   }
 
   signInWithGoogle(): Promise<string> {
-    const waitForGoogle = (timeoutMs = 4000) =>
+    const waitForGoogle = (timeoutMs = 5000) =>
       new Promise<void>((resolve, reject) => {
-        if (window.google) return resolve()
+        if (window.google?.accounts?.id) return resolve()
         const startedAt = Date.now()
         const timer = setInterval(() => {
-          if (window.google) {
+          if (window.google?.accounts?.id) {
             clearInterval(timer)
             resolve()
           } else if (Date.now() - startedAt > timeoutMs) {
             clearInterval(timer)
-            reject(new Error('Google API not loaded'))
+            reject(
+              new Error(
+                'Google API not loaded. Current origin: ' +
+                  window.location.origin
+              )
+            )
           }
-        }, 50)
+        }, 100)
       })
 
     return new Promise((resolve, reject) => {
       if (!GOOGLE_CLIENT_ID) {
-        reject(new Error('Missing Google Client ID'))
+        reject(
+          new Error(
+            'Missing Google Client ID. Please set VITE_GOOGLE_CLIENT_ID in .env file'
+          )
+        )
         return
       }
+
+      const currentOrigin = window.location.origin
 
       waitForGoogle()
         .then(() => {
@@ -97,34 +108,44 @@ class GoogleAuthService {
                 resolve(response.credential)
               } else {
                 settled = true
-                reject(new Error('No credential received'))
+                reject(new Error('No credential received from Google'))
               }
             },
           })
 
-          // Trigger One Tap
-          window.google!.accounts.id.prompt(
-            (notification?: GoogleOneTapPromptNotification) => {
-              if (!notification || settled) return
-              if (
-                notification.isNotDisplayed() ||
-                notification.isSkippedMoment()
-              ) {
-                settled = true
-                reject(new Error('One Tap not available'))
-              }
-            }
-          )
+          // Try One Tap first
+          try {
+            window.google!.accounts.id.prompt(
+              (notification?: GoogleOneTapPromptNotification) => {
+                if (!notification || settled) return
 
-          // Safety timeout in case neither callback nor prompt fires
+                // Don't reject immediately - wait for button click or timeout
+                // One Tap might not be available but button will work
+              }
+            )
+          } catch {
+            // Continue - button will still work
+          }
+
+          // Safety timeout
           setTimeout(() => {
             if (!settled) {
               settled = true
-              reject(new Error('Google sign-in timed out'))
+              reject(
+                new Error(
+                  `Google sign-in timed out. ` +
+                    `Please ensure "${currentOrigin}" is added to Authorized JavaScript origins in Google Cloud Console. ` +
+                    `Current Client ID: ${GOOGLE_CLIENT_ID.substring(0, 30)}...`
+                )
+              )
             }
-          }, 8000)
+          }, 10000)
         })
-        .catch(err => reject(err as Error))
+        .catch(err => {
+          const error =
+            err instanceof Error ? err : new Error('Google sign-in failed')
+          reject(error)
+        })
     })
   }
 
@@ -133,31 +154,54 @@ class GoogleAuthService {
     onSuccess: (credential: string) => void,
     onError: (error: Error) => void
   ): void {
-    if (!window.google) {
-      onError(new Error('Google API not loaded'))
+    if (!window.google?.accounts?.id) {
+      onError(new Error('Google API not loaded. Please refresh the page.'))
       return
     }
 
-    window.google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: (response: GoogleIdCredential) => {
-        if (response.credential) {
-          onSuccess(response.credential)
-        } else {
-          onError(new Error('No credential received'))
-        }
-      },
-    })
+    if (!GOOGLE_CLIENT_ID) {
+      onError(
+        new Error(
+          'Google Client ID not configured. Please set VITE_GOOGLE_CLIENT_ID in .env file.'
+        )
+      )
+      return
+    }
 
-    window.google.accounts.id.renderButton(element, {
-      theme: 'filled_blue',
-      size: 'large',
-      type: 'standard',
-      text: 'continue_with',
-      shape: 'rectangular',
-      logo_alignment: 'left',
-      width: element.offsetWidth,
-    })
+    const currentOrigin = window.location.origin
+
+    try {
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: (response: GoogleIdCredential) => {
+          if (response.credential) {
+            onSuccess(response.credential)
+          } else {
+            onError(new Error('No credential received from Google button'))
+          }
+        },
+      })
+
+      window.google.accounts.id.renderButton(element, {
+        theme: 'filled_blue',
+        size: 'large',
+        type: 'standard',
+        text: 'continue_with',
+        shape: 'rectangular',
+        logo_alignment: 'left',
+        width: element.offsetWidth || 300,
+      })
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to render Google button'
+      onError(
+        new Error(
+          `${errorMessage}. ` +
+            `Please ensure "${currentOrigin}" is in Authorized JavaScript origins. ` +
+            `Client ID: ${GOOGLE_CLIENT_ID.substring(0, 30)}...`
+        )
+      )
+    }
   }
 
   // authenticateWithBackend removed to avoid duplication with authService.loginWithGoogle
