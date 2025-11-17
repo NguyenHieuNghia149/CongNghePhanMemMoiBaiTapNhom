@@ -5,10 +5,11 @@ import Login from '@/pages/auth/login/Login'
 import Register from '@/pages/auth/register/Register'
 import ForgotPassword from '@/pages/auth/forgotpassword/ForgotPassword'
 import Profile from '@/pages/profile/Profile'
-
 import HomePage from '@/pages/home/Home'
 import { PublicRoute } from './PublicRoute'
 import { ProtectedRoute } from './ProtectedRoute'
+import ChallengePage from '@/pages/challenge/ChallengePage'
+import ProblemDetailPage from '@/pages/challengeDetail/ProblemDetailPage'
 // removed unused import
 
 export const router = createBrowserRouter([
@@ -60,10 +61,20 @@ export const router = createBrowserRouter([
         index: true,
         element: <HomePage />,
       },
-      
+      {
+        path: 'dashboard/challenge/:challengeId',
+        element: <ChallengePage />,
+      },
     ],
   },
-  
+  {
+    path: '/problems/:id',
+    element: (
+      <ProtectedRoute>
+        <ProblemDetailPage />
+      </ProtectedRoute>
+    ),
+  },
 ])
 
 export default router
