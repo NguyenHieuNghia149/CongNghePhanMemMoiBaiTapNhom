@@ -3,11 +3,17 @@ import { Request, Response, NextFunction } from 'express';
 import { DatabaseUtils } from '../database/utils';
 import authRoutes from './auth.routes';
 import { generalLimiter } from '../middlewares/ratelimit.middleware';
+import challengeRoutes from './challenge.routes';
+import favoriteRoutes from './favorite.routes';
+import topicRoutes from './topic.routes';
 
 function route(app: Application): void {
   app.use('/api', generalLimiter);
 
   app.use('/api/auth', authRoutes);
+  app.use('/api/challenges', challengeRoutes);
+  app.use('/api/favorites', favoriteRoutes);
+  app.use('/api/topics', topicRoutes);
 
   app.use('/api/health', async (req, res) => {
     const dbHealth = await DatabaseUtils.getHealthInfo();

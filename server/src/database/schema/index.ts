@@ -4,7 +4,11 @@ export * from './token';
 export * from './topic';
 export * from './lesson';
 export * from './problem';
+export * from './testcase';
+export * from './solution';
 export * from './submission';
+export * from './resultSubmission';
+export * from './favorite';
 
 // Relations
 import { relations } from 'drizzle-orm';
@@ -13,7 +17,12 @@ import { refreshTokens } from './token';
 import { topics } from './topic';
 import { lessons } from './lesson';
 import { problems } from './problem';
+import { testcases } from './testcase';
+import { solutions } from './solution';
+import { solutionApproaches } from './solutionApproaches';
 import { submissions } from './submission';
+import { resultSubmissions } from './resultSubmission';
+import { favorite } from './favorite';
 
 export const usersRelations = relations(users, ({ many }) => ({
   refreshTokens: many(refreshTokens),
@@ -49,7 +58,31 @@ export const problemsRelations = relations(problems, ({ one, many }) => ({
     fields: [problems.topicId],
     references: [topics.id],
   }),
+  testcases: many(testcases),
+  solutions: one(solutions),
   submissions: many(submissions),
+}));
+
+export const testcasesRelations = relations(testcases, ({ one }) => ({
+  problem: one(problems, {
+    fields: [testcases.problemId],
+    references: [problems.id],
+  }),
+}));
+
+export const solutionsRelations = relations(solutions, ({ one, many }) => ({
+  problem: one(problems, {
+    fields: [solutions.problemId],
+    references: [problems.id],
+  }),
+  approaches: many(solutionApproaches),
+}));
+
+export const solutionApproachesRelations = relations(solutionApproaches, ({ one }) => ({
+  solution: one(solutions, {
+    fields: [solutionApproaches.solutionId],
+    references: [solutions.id],
+  }),
 }));
 
 export const submissionsRelations = relations(submissions, ({ one, many }) => ({
@@ -60,5 +93,32 @@ export const submissionsRelations = relations(submissions, ({ one, many }) => ({
   problem: one(problems, {
     fields: [submissions.problemId],
     references: [problems.id],
+  }),
+  results: many(resultSubmissions),
+}));
+
+export const resultSubmissionsRelations = relations(resultSubmissions, ({ one }) => ({
+  submission: one(submissions, {
+    fields: [resultSubmissions.submissionId],
+    references: [submissions.id],
+  }),
+  testcase: one(testcases, {
+    fields: [resultSubmissions.testcaseId],
+    references: [testcases.id],
+  }),
+}));
+
+export const favoriteRelations = relations(favorite, ({ one }) => ({
+  user: one(users, {
+    fields: [favorite.userId],
+    references: [users.id],
+  }),
+  problem: one(problems, {
+    fields: [favorite.problemId],
+    references: [problems.id],
+  }),
+  lesson: one(lessons, {
+    fields: [favorite.lessonId],
+    references: [lessons.id],
   }),
 }));
