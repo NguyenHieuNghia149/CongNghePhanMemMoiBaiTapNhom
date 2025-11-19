@@ -6,6 +6,8 @@ import { generalLimiter } from '../middlewares/ratelimit.middleware';
 import challengeRoutes from './challenge.routes';
 import favoriteRoutes from './favorite.routes';
 import topicRoutes from './topic.routes';
+import lessonRoutes from './lesson.routes';
+import lessonDetailRoutes from './lessonDetail.routes';
 
 function route(app: Application): void {
   app.use('/api', generalLimiter);
@@ -14,6 +16,8 @@ function route(app: Application): void {
   app.use('/api/challenges', challengeRoutes);
   app.use('/api/favorites', favoriteRoutes);
   app.use('/api/topics', topicRoutes);
+  app.use('/api/lessons', lessonRoutes);
+  app.use('/api/lesson-details', lessonDetailRoutes);
 
   app.use('/api/health', async (req, res) => {
     const dbHealth = await DatabaseUtils.getHealthInfo();
