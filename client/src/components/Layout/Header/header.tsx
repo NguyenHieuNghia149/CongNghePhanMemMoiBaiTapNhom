@@ -163,7 +163,7 @@ const Header: React.FC = () => {
                                 // Trigger logout and redirect to login
                                 logout().finally(() => {
                                   setIsProfileOpen(false)
-                                  navigate('/login')
+                                  navigate('/dashboard')
                                 })
                                 return
                               }
