@@ -28,7 +28,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     },
     ref
   ) => {
-    const inputId = props.id || `input-${Math.random().toString(36).substr(2, 9)}`
+    const inputId =
+      props.id || `input-${Math.random().toString(36).substr(2, 9)}`
 
     const darkClasses =
       ' !bg-slate-800 !text-slate-100 placeholder:!text-slate-400 !border-slate-700 focus:!border-indigo-500 focus:!ring-2 focus:!ring-indigo-500/30 '
@@ -44,10 +45,16 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             {required && <span className="input-required">*</span>}
           </label>
         )}
-        
+
         <div className="input-container">
-          {icon && <div className={`input-icon ${tone === 'dark' ? 'text-slate-400' : ''}`}>{icon}</div>}
-          
+          {icon && (
+            <div
+              className={`input-icon ${tone === 'dark' ? 'text-slate-400' : ''}`}
+            >
+              {icon}
+            </div>
+          )}
+
           <input
             ref={ref}
             id={inputId}
@@ -55,13 +62,21 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               tone === 'dark' ? darkClasses : ''
             } ${className}`}
             aria-invalid={!!error}
-            aria-describedby={error ? `${inputId}-error` : success ? `${inputId}-success` : undefined}
+            aria-describedby={
+              error
+                ? `${inputId}-error`
+                : success
+                  ? `${inputId}-success`
+                  : undefined
+            }
             {...props}
           />
-          
-          {rightButton && <div className="input-right-button">{rightButton}</div>}
+
+          {rightButton && (
+            <div className="input-right-button">{rightButton}</div>
+          )}
         </div>
-        
+
         {error && (
           <div
             id={`${inputId}-error`}
@@ -71,7 +86,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             {error}
           </div>
         )}
-        
+
         {success && !error && (
           <div
             id={`${inputId}-success`}

@@ -3,7 +3,7 @@ import { ProblemRepository } from '@/repositories/problem.repository';
 import { SolutionRepository } from '@/repositories/solution.repository';
 import { TestcaseRepository } from '@/repositories/testcase.repository';
 import { TopicRepository } from '@/repositories/topic.repository';
-import { updateSolutionVisibilitySchema } from '@/database/schema/solution';
+import { updateSolutionVisibilitySchema } from '@/database/schema';
 import { ChallengeResponse, ProblemInput, ProblemResponse } from '@/validations/problem.validation';
 import { LessonRepository } from '@/repositories/lesson.repository';
 import { SubmissionRepository } from '@/repositories/submission.repository';

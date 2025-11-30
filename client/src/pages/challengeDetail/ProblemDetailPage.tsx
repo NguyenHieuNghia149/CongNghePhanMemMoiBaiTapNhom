@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import ProblemSection from '../../components/problem/ProblemSection'
 import CodeEditorSection from '../../components/editor/CodeEditorSection'
@@ -120,16 +120,24 @@ export default function ProblemDetailPage() {
         problemId: problemData.problem.id,
       }
       const data = await submissionsService.runCode(payload)
-      const summary = data.data.summary
+      
+      // Filter to only show public test cases
+      const allResults = coerceResults(data.data.results) || []
+      const publicResults = allResults.filter(r => r.isPublic !== false)
+      
+      // Recalculate summary based on public test cases only
+      const publicPassed = publicResults.filter(r => r.ok).length
+      const publicTotal = publicResults.length
+      
       setOutput({
-        status: summary.passed === summary.total ? 'accepted' : 'rejected',
+        status: publicPassed === publicTotal && publicTotal > 0 ? 'accepted' : 'rejected',
         message:
-          summary.passed === summary.total
+          publicPassed === publicTotal && publicTotal > 0
             ? 'All test cases passed!'
-            : `Passed ${summary.passed}/${summary.total} test cases`,
-        passedTests: summary.passed,
-        totalTests: summary.total,
-        results: data.data.results,
+            : `Passed ${publicPassed}/${publicTotal} test cases`,
+        passedTests: publicPassed,
+        totalTests: publicTotal,
+        results: publicResults,
         processingTime: data.data.processingTime,
       })
     } catch (err) {
@@ -147,6 +155,74 @@ export default function ProblemDetailPage() {
   const socketRef = useRef<Socket | null>(null)
   const socketTimeoutRef = useRef<number | null>(null)
   const isCompletedRef = useRef<boolean>(false)
+  const splitPaneRef = useRef<HTMLDivElement | null>(null)
+  const isDraggingSplitRef = useRef(false)
+  const [problemPanelWidth, setProblemPanelWidth] = useState(60)
+  const clampWidth = useCallback((nextWidth: number) => {
+    const MIN = 35
+    const MAX = 75
+    return Math.min(MAX, Math.max(MIN, nextWidth))
+  }, [])
+
+  const updateSplitFromClientX = useCallback(
+    (clientX: number) => {
+      if (!splitPaneRef.current) return
+      const rect = splitPaneRef.current.getBoundingClientRect()
+      if (rect.width === 0) return
+      const relativeX = clientX - rect.left
+      const nextWidth = (relativeX / rect.width) * 100
+      setProblemPanelWidth(clampWidth(nextWidth))
+    },
+    [clampWidth]
+  )
+
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!isDraggingSplitRef.current) return
+      event.preventDefault()
+      updateSplitFromClientX(event.clientX)
+    }
+
+    const handleTouchMove = (event: TouchEvent) => {
+      if (!isDraggingSplitRef.current) return
+      const touch = event.touches[0]
+      if (!touch) return
+      updateSplitFromClientX(touch.clientX)
+    }
+
+    const stopDragging = () => {
+      isDraggingSplitRef.current = false
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('touchmove', handleTouchMove)
+    window.addEventListener('mouseup', stopDragging)
+    window.addEventListener('touchend', stopDragging)
+    window.addEventListener('touchcancel', stopDragging)
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('touchmove', handleTouchMove)
+      window.removeEventListener('mouseup', stopDragging)
+      window.removeEventListener('touchend', stopDragging)
+      window.removeEventListener('touchcancel', stopDragging)
+    }
+  }, [updateSplitFromClientX])
+
+  const startDraggingSplit = (
+    event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>
+  ) => {
+    event.preventDefault()
+    isDraggingSplitRef.current = true
+    if ('touches' in event) {
+      const touch = event.touches[0]
+      if (touch) {
+        updateSplitFromClientX(touch.clientX)
+      }
+    }
+  }
+
+  const resetSplit = () => setProblemPanelWidth(60)
 
   const clearPoll = () => {
     if (pollTimerRef.current) {
@@ -202,26 +278,30 @@ export default function ProblemDetailPage() {
 
   const coerceResults = (
     results?: Array<{
-      index: number
+      index?: number
+      testcaseId?: string
       input: string
       expected?: string
       expectedOutput?: string
       actual?: string
       actualOutput?: string
-      ok: boolean
+      ok?: boolean
+      isPassed?: boolean
       stderr?: string
       executionTime?: number
+      isPublic?: boolean
     }>
   ): SandboxTestcaseResult[] | undefined => {
     if (!Array.isArray(results)) return undefined
-    return results.map(r => ({
-      index: r.index,
+    return results.map((r, idx) => ({
+      index: r.index ?? idx, // Use provided index or fallback to array index
       input: r.input,
       expectedOutput: r.expectedOutput ?? r.expected ?? '',
       actualOutput: r.actualOutput ?? r.actual ?? '',
-      ok: r.ok,
+      ok: r.ok ?? r.isPassed ?? false,
       stderr: r.stderr || '',
       executionTime: r.executionTime ?? 0,
+      isPublic: r.isPublic ?? true, // Default to true if not provided
     }))
   }
 
@@ -330,32 +410,44 @@ export default function ProblemDetailPage() {
             'failed',
           ]
           if (terminal.includes(normalized)) {
-            const passed = detail.result?.passed ?? 0
-            const total = detail.result?.total ?? problemData.testcases.length
+            // Filter to only show public test cases
+            const allResults = coerceResults(detail.result?.results) || []
+            const publicResults = allResults.filter(r => r.isPublic !== false)
+            
+            // Recalculate summary based on public test cases only
+            const publicPassed = publicResults.filter(r => r.ok).length
+            const publicTotal = publicResults.length
+            
             setOutput({
               status: normalized === 'accepted' ? 'accepted' : 'rejected',
               message:
                 normalized === 'accepted'
                   ? 'You have successfully completed this problem!'
-                  : `Status: ${normalized}. Passed ${passed}/${total}`,
-              passedTests: passed,
-              totalTests: total,
-              results: coerceResults(detail.result?.results),
+                  : `Status: ${normalized}. Passed ${publicPassed}/${publicTotal}`,
+              passedTests: publicPassed,
+              totalTests: publicTotal,
+              results: publicResults,
             })
             clearPoll()
             return true
           } else {
-            const partialPassed = detail.result?.passed
-            const partialTotal = detail.result?.total
+            // Filter to only show public test cases
+            const allResults = coerceResults(detail.result?.results) || []
+            const publicResults = allResults.filter(r => r.isPublic !== false)
+            
+            // Recalculate summary based on public test cases only
+            const publicPassed = publicResults.filter(r => r.ok).length
+            const publicTotal = publicResults.length
+            
             setOutput({
               status: 'running',
               message:
-                partialPassed !== undefined && partialTotal !== undefined
-                  ? `Running... ${partialPassed}/${partialTotal} passed`
+                publicPassed !== undefined && publicTotal !== undefined
+                  ? `Running... ${publicPassed}/${publicTotal} passed`
                   : 'Running...',
-              passedTests: partialPassed,
-              totalTests: partialTotal,
-              results: coerceResults(detail.result?.results),
+              passedTests: publicPassed,
+              totalTests: publicTotal,
+              results: publicResults,
             })
             return false
           }
@@ -450,26 +542,54 @@ export default function ProblemDetailPage() {
         navigationLoading={navigationLoading}
       />
 
-      <div className="flex min-h-0 flex-1">
-        <ProblemSection
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          problemData={problemData || undefined}
+      <div
+        ref={splitPaneRef}
+        className="flex min-h-0 flex-1 flex-col lg:flex-row"
+      >
+        <div
+          className="flex h-full min-h-0 min-w-[200px] flex-col overflow-hidden border-b border-gray-800 lg:border-b-0 lg:border-r"
+          style={{
+            flexBasis: `${problemPanelWidth}%`,
+            maxWidth: `${problemPanelWidth}%`,
+          }}
+        >
+          <ProblemSection
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            problemData={problemData || undefined}
+          />
+        </div>
+        <div
+          className="hidden w-0.5 cursor-col-resize select-none bg-gray-800 lg:block"
+          onMouseDown={startDraggingSplit}
+          onTouchStart={startDraggingSplit}
+          onDoubleClick={resetSplit}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize panels"
+          tabIndex={-1}
         />
-
-        <CodeEditorSection
-          code={code}
-          onCodeChange={setCode}
-          selectedLanguage={selectedLanguage}
-          onLanguageChange={setSelectedLanguage}
-          testCases={testCases}
-          selectedTestCase={selectedTestCase}
-          onTestCaseSelect={setSelectedTestCase}
-          output={output}
-          onRun={handleRun}
-          onSubmit={handleSubmit}
-          onReset={handleReset}
-        />
+        <div
+          className="flex h-full min-h-0 min-w-[320px] flex-1 overflow-hidden"
+          style={{
+            flexBasis: `${100 - problemPanelWidth}%`,
+            maxWidth: `${100 - problemPanelWidth}%`,
+          }}
+        >
+          <CodeEditorSection
+            code={code}
+            onCodeChange={setCode}
+            selectedLanguage={selectedLanguage}
+            onLanguageChange={setSelectedLanguage}
+            testCases={testCases}
+            selectedTestCase={selectedTestCase}
+            onTestCaseSelect={setSelectedTestCase}
+            output={output}
+            onRun={handleRun}
+            onSubmit={handleSubmit}
+            onReset={handleReset}
+          />
+        </div>
       </div>
     </div>
   )

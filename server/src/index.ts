@@ -5,10 +5,14 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { config } from 'dotenv';
 import compression from 'compression';
+import { createServer } from 'http';
 import { DatabaseService } from './database/connection';
 import route from './routes';
+import { initializeWebSocket } from './services/websocket.service';
+import { queueService } from './services/queue.service';
 
 const app = express();
+const server = createServer(app);
 
 config();
 
@@ -50,6 +54,7 @@ app.use(
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
+        console.log('Blocked by CORS:', origin);
         callback(new Error('Not allowed by CORS'));
       }
     },
@@ -69,6 +74,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   // Xử lý preflight requests (OPTIONS)
   if (req.method === 'OPTIONS') {
     res.sendStatus(200);
+    return;
   }
   next();
 });
@@ -76,49 +82,70 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Connect to database
-DatabaseService.connect()
-  .then(() => DatabaseService.runMigrations())
-  .catch(console.error);
+// Initialize application
+async function startServer() {
+  try {
+    // Connect to database
+    console.log('Connecting to database...');
+    await DatabaseService.connect();
 
-// Routes
-route(app);
+    // Run migrations
+    console.log('Running migrations...');
+    await DatabaseService.runMigrations();
 
-// Global error handler
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  console.error('Global error handler:', err);
+    // Initialize WebSocket
+    initializeWebSocket(server);
 
-  if (err.message === 'Not allowed by CORS') {
-    return res.status(403).json({
-      success: false,
-      message: 'CORS error: Origin not allowed',
-      code: 'CORS_ERROR',
+    // Connect to Redis
+    // queueService
+    //   .connect()
+    //   .then(() => console.log('Connected to Redis'))
+    //   .catch(error =>
+    //     console.error('Redis connection failed (continuing without it):', error.message)
+    //   );
+
+    // Routes
+    route(app);
+
+    // Global error handler
+    app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+      if (err.message === 'Not allowed by CORS') {
+        return res.status(403).json({
+          success: false,
+          message: 'CORS error: Origin not allowed',
+          code: 'CORS_ERROR',
+        });
+      }
+
+      return res.status(500).json({
+        status: 'error',
+        message: 'Internal Server Error',
+        code: 'INTERNAL_ERROR',
+        timestamp: new Date().toISOString(),
+      });
     });
+
+    // 404 handler
+    app.use((req: Request, res: Response) => {
+      res.status(404).json({
+        success: false,
+        message: 'API endpoint not found',
+        code: 'NOT_FOUND',
+      });
+    });
+
+    const PORT = process.env.PORT || 3001;
+
+    server.listen(PORT, () => {
+      console.log(`server is running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
   }
+}
 
-  return res.status(500).json({
-    status: 'error',
-    message: 'Internal Server Error',
-    code: 'INTERNAL_ERROR',
-    timestamp: new Date().toISOString(),
-  });
-});
-
-// 404 handler
-// app.use('/api/*', (req: Request, res: Response) => {
-//   res.status(404).json({
-//     success: false,
-//     message: 'API endpoint not found',
-//     code: 'NOT_FOUND',
-//   });
-// });
-
-const PORT = process.env.PORT || 3001;
-
-app.listen(PORT, () => {
-  console.log(`server is running on port ${PORT}`);
-});
+startServer();

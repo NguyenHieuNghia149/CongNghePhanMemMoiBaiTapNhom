@@ -1,7 +1,12 @@
 import { users, UserEntity, UserInsert, submissions } from '@/database/schema';
 import { BaseRepository } from './base.repository';
-import { eq, ilike, and, or, desc, asc, gte, lte, count, sql } from 'drizzle-orm';
-import { UserAlreadyExistsException, UserNotFoundException } from '@/exceptions/auth.exceptions';
+import { eq, ilike, and, or, desc, asc, gte, lte, count, sql, gt } from 'drizzle-orm';
+import {
+  UserAlreadyExistsException,
+  UserNotFoundException,
+  ValidationException,
+} from '@/exceptions/auth.exceptions';
+
 import { SanitizationUtils } from '@/utils/security';
 
 export interface UserFilters {
@@ -335,27 +340,27 @@ export class UserRepository extends BaseRepository<typeof users, UserEntity, Use
 
     // Count submissions by status
     const totalSubmissions = allSubmissions.length;
-    const acceptedSubmissions = allSubmissions.filter((s) => s.status === 'ACCEPTED').length;
-    const wrongAnswerSubmissions = allSubmissions.filter((s) => s.status === 'WRONG_ANSWER').length;
+
+    const acceptedSubmissions = allSubmissions.filter(s => s.status === 'ACCEPTED').length;
+    const wrongAnswerSubmissions = allSubmissions.filter(s => s.status === 'WRONG_ANSWER').length;
     const timeLimitExceededSubmissions = allSubmissions.filter(
-      (s) => s.status === 'TIME_LIMIT_EXCEEDED'
+      s => s.status === 'TIME_LIMIT_EXCEEDED'
     ).length;
     const memoryLimitExceededSubmissions = allSubmissions.filter(
-      (s) => s.status === 'MEMORY_LIMIT_EXCEEDED'
+      s => s.status === 'MEMORY_LIMIT_EXCEEDED'
     ).length;
-    const runtimeErrorSubmissions = allSubmissions.filter((s) => s.status === 'RUNTIME_ERROR')
-      .length;
+    const runtimeErrorSubmissions = allSubmissions.filter(s => s.status === 'RUNTIME_ERROR').length;
     const compilationErrorSubmissions = allSubmissions.filter(
-      (s) => s.status === 'COMPILATION_ERROR'
+      s => s.status === 'COMPILATION_ERROR'
     ).length;
 
     // Get unique problems attempted
-    const problemsAttempted = new Set(allSubmissions.map((s) => s.problemId));
+    const problemsAttempted = new Set(allSubmissions.map(s => s.problemId));
     const totalProblemsAttempted = problemsAttempted.size;
 
     // Get problems solved (with at least one ACCEPTED submission)
     const problemsSolved = new Set(
-      allSubmissions.filter((s) => s.status === 'ACCEPTED').map((s) => s.problemId)
+      allSubmissions.filter(s => s.status === 'ACCEPTED').map(s => s.problemId)
     );
     const totalProblemsSolved = problemsSolved.size;
 
@@ -393,5 +398,43 @@ export class UserRepository extends BaseRepository<typeof users, UserEntity, Use
       .select()
       .from(submissions)
       .where(and(eq(submissions.userId, userId), eq(submissions.status, status)));
+  }
+  async getUserRank(userId: string): Promise<{ rankingPoint: number; rank: number }> {
+    const user = await this.findById(userId);
+    if (!user) {
+      throw new UserNotFoundException(`User with id ${userId} not found`);
+    }
+
+    const currentPoint = user.rankingPoint ?? 0;
+
+    const [higherCount] = await this.db
+      .select({ cnt: count() })
+      .from(users)
+      .where(gt(users.rankingPoint, currentPoint));
+
+    const rank = (higherCount?.cnt || 0) + 1;
+
+    return { rankingPoint: currentPoint, rank };
+  }
+
+  async incrementRankingPoint(userId: string, point: number): Promise<UserEntity> {
+    if (point < 0) {
+      throw new ValidationException('Point cannot be negative');
+    }
+
+    const [user] = await this.db
+      .update(users)
+      .set({
+        rankingPoint: sql`${users.rankingPoint} + ${point}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (!user) {
+      throw new UserNotFoundException(`User with id ${userId} not found`);
+    }
+
+    return user;
   }
 }

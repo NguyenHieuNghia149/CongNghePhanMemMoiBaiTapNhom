@@ -18,10 +18,10 @@ import {
   ValidationException,
 } from '@/exceptions/auth.exceptions';
 import { Request } from 'express';
-import { OAuth2Client } from 'google-auth-library';
-import { EStatus } from '@/enums/EStatus';
+import { EStatus } from '@/enums/userStatus.enum';
 import { EMailService, otpStore } from './email.service';
-import { EUserRole } from '@/enums/EUerRole';
+import { EUserRole } from '@/enums/userRole.enum';
+import { OAuth2Client } from 'google-auth-library';
 
 export class AuthService {
   private userRepository: UserRepository;
@@ -54,6 +54,10 @@ export class AuthService {
       throw new ValidationException(passwordValidation.errors.join(', '));
     }
 
+    if (dto.password !== dto.passwordConfirm) {
+      throw new ValidationException('Password does not match');
+    }
+
     const hashedPassword = await PasswordUtils.hashPassword(dto.password);
 
     const userData = {
@@ -63,14 +67,6 @@ export class AuthService {
     } as any;
 
     const user = await this.userRepository.createUser(userData);
-
-    //const tokens = JWTUtils.generateTokenPair(user.id, user.email, user.role);
-
-    // await this.tokenRepository.createRefreshToken({
-    //   token: tokens.refreshToken,
-    //   userId: user.id,
-    //   expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    // });
 
     return {
       user: {
@@ -88,6 +84,59 @@ export class AuthService {
       //   refreshToken: tokens.refreshToken,
       //   expiresIn: tokens.expiresIn,
       // },
+    };
+  }
+
+  async login(dto: LoginInput): Promise<AuthResponse> {
+    const user = await this.userRepository.findByEmail(dto.email);
+    if (!user) {
+      throw new InvalidCredentialsException('User with this email does not exist');
+    }
+
+    // Verify password
+    const isPasswordValid = await PasswordUtils.comparePassword(dto.password, user.password);
+    if (!isPasswordValid) {
+      throw new InvalidCredentialsException('Invalid email or password');
+    }
+
+    // Check if account is active
+    if (user.status !== EStatus.ACTIVE) {
+      throw new InvalidCredentialsException('Account is not active');
+    }
+
+    await this.userRepository.updateLastLogin(user.id);
+
+    // Generate tokens (no sessionId)
+    const tokens = JWTUtils.generateTokenPair(user.id, user.email, user.role);
+
+    await this.tokenRepository.createRefreshToken({
+      token: tokens.refreshToken,
+      userId: user.id,
+      expiresAt: new Date(Date.now() + (dto.rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000),
+    });
+
+    // get rank info
+    const { rankingPoint, rank } = await this.userRepository.getUserRank(user.id);
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        avatar: user.avatar,
+        role: user.role,
+        status: user.status,
+        rankingPoint: rankingPoint ?? null,
+        rank,
+        lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
+        createdAt: user.createdAt.toISOString(),
+      },
+      tokens: {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        expiresIn: tokens.expiresIn,
+      },
     };
   }
 
@@ -129,6 +178,7 @@ export class AuthService {
         avatar,
         status: EStatus.ACTIVE,
         role: EUserRole.USER,
+        rankingPoint: 0,
       } as any);
     } else {
       if (avatar && user.avatar !== avatar) {
@@ -151,6 +201,8 @@ export class AuthService {
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
 
+    const { rankingPoint, rank } = await this.userRepository.getUserRank(u.id);
+
     return {
       user: {
         id: u.id,
@@ -159,57 +211,11 @@ export class AuthService {
         lastName: u.lastName,
         avatar: u.avatar,
         role: u.role,
-        rankingPoints: u.rankingPoints,
+        rankingPoint: rankingPoint,
+        rank: rank,
         status: u.status,
         createdAt: u.createdAt.toISOString(),
-      },
-      tokens: {
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        expiresIn: tokens.expiresIn,
-      },
-    };
-  }
-
-  async login(dto: LoginInput): Promise<AuthResponse> {
-    const user = await this.userRepository.findByEmail(dto.email);
-    if (!user) {
-      throw new InvalidCredentialsException('User with this email does not exist');
-    }
-
-    // Verify password
-    const isPasswordValid = await PasswordUtils.comparePassword(dto.password, user.password);
-    if (!isPasswordValid) {
-      throw new InvalidCredentialsException('Invalid email or password');
-    }
-
-    // Check if account is active
-    if (user.status !== EStatus.ACTIVE) {
-      throw new InvalidCredentialsException('Account is not active');
-    }
-
-    await this.userRepository.updateLastLogin(user.id);
-
-    // Generate tokens (no sessionId)
-    const tokens = JWTUtils.generateTokenPair(user.id, user.email, user.role);
-
-    await this.tokenRepository.createRefreshToken({
-      token: tokens.refreshToken,
-      userId: user.id,
-      expiresAt: new Date(Date.now() + (dto.rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000),
-    });
-
-    return {
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        avatar: user.avatar,
-        role: user.role,
-        rankingPoints: user.rankingPoints,
-        status: user.status,
-        createdAt: user.createdAt.toISOString(),
+        lastLoginAt: u.lastLoginAt ? u.lastLoginAt.toISOString() : null,
       },
       tokens: {
         accessToken: tokens.accessToken,
@@ -222,7 +228,11 @@ export class AuthService {
   async refreshToken(dto: RefreshTokenInput): Promise<AuthResponse> {
     const payload = JWTUtils.verifyRefreshToken(dto.refreshToken);
 
+    console.log('Refresh token payload:', payload);
+    console.log('Provided refresh token:', dto.refreshToken);
     const storedToken = await this.tokenRepository.findByToken(dto.refreshToken);
+
+    console.log('Stored token from DB:', storedToken);
     if (!storedToken) {
       throw new TokenExpiredException('Refresh token not found or revoked');
     }
@@ -232,23 +242,14 @@ export class AuthService {
       throw new TokenExpiredException('Refresh token expired');
     }
 
-    // No session binding
-
     const user = await this.userRepository.findByIdOrThrow(payload.userId);
     if (user.status !== EStatus.ACTIVE) {
       throw new InvalidCredentialsException('Account is not active');
     }
 
-    // Token rotation: rotate tokens (no sessionId)
     const rotated = JWTUtils.generateTokenPair(user.id, user.email, user.role);
 
-    await this.tokenRepository.createRefreshToken({
-      token: rotated.refreshToken,
-      userId: user.id,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    });
-
-    await this.tokenRepository.revokeToken(dto.refreshToken);
+    const { rankingPoint, rank } = await this.userRepository.getUserRank(user.id);
 
     return {
       user: {
@@ -258,8 +259,10 @@ export class AuthService {
         lastName: user.lastName,
         avatar: user.avatar,
         role: user.role,
-        rankingPoints: user.rankingPoints,
         status: user.status,
+        rankingPoint: rankingPoint ?? null,
+        rank,
+        lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
         createdAt: user.createdAt.toISOString(),
       },
       tokens: {
@@ -283,6 +286,35 @@ export class AuthService {
   async cleanupExpiredTokens(): Promise<void> {
     await this.tokenRepository.cleanupExpiredTokens();
   }
+
+  // async sendVerificationCode(email: string, req: Request): Promise<void> {
+  //   const rateLimitKey = `sendVeriCode:${req.ip}`;
+  //   const rateLimit = RateLimitUtils.checkRateLimit(rateLimitKey, 20, 15 * 60 * 1000);
+  //   if (!rateLimit.allowed) {
+  //     throw new RateLimitExceededException();
+  //   }
+
+  //   const user = await this.userRepository.findByEmail(email);
+
+  //   if (!user) {
+  //     throw new InvalidCredentialsException("User with this email doesn't exist");
+  //   }
+
+  //   const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+  //   otpStore.set(email, {
+  //     otp,
+  //     expires: new Date(Date.now() + 10 * 60 * 1000),
+  //     userData: { email },
+  //   });
+
+  //   await transporter.sendMail({
+  //     from: process.env.EMAIL,
+  //     to: email,
+  //     subject: 'Your Verification Code',
+  //     text: `Your verification code is ${otp}. It will expire in 10 minutes.`,
+  //   });
+  // }
 
   async resetPassword(email: string, newPassword: string, otp: string): Promise<void> {
     const isOTPValid = await this.emailService.verifyOTP(email, otp!);

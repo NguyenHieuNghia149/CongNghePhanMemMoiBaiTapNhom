@@ -1,14 +1,14 @@
 export interface User {
   id: string
   email: string
-  firstname: string | null
-  lastname: string | null
+  firstname: string
+  lastname: string
   role: string
-  avatar?: string | null
-  rankingPoints?: number
-  status?: string
+  avatar?: string
+  rankingPoint?: number
+  rank?: number
   createdAt: string
-  lastLoginAt?: string
+  lastLoginAt: string
 }
 
 export interface LoginCredentials {
@@ -30,6 +30,12 @@ export interface AuthTokens {
   accessToken: string
   refreshToken: string
   expiresAt: number
+}
+
+export interface AuthState {
+  user: User | null
+  isLoading: boolean
+  isAuthenticated: boolean
 }
 
 export interface AuthResponse {

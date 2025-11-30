@@ -5,19 +5,23 @@ import {
   MessageCircle,
   Bell,
   Sun,
+  Moon,
   Grid,
   ChevronDown,
 } from 'lucide-react'
 import { useAuth } from '../../../hooks/api/useAuth'
+import { useTheme } from '@/contexts/useTheme'
 import './header.scss'
 const Header: React.FC = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, isAuthenticated, isLoading, logout } = useAuth()
+  const { theme, toggleTheme } = useTheme()
 
   const navItems = [
     { path: '/dashboard', label: 'Prepare' },
     { path: '/lessons', label: 'Lesson' },
+    { path: '/exam', label: 'Exam' },
   ]
 
   const profileItems = [
@@ -100,8 +104,16 @@ const Header: React.FC = () => {
                 <button className="nav-icon text-white transition-colors hover:text-white">
                   <Bell className="h-5 w-5" />
                 </button>
-                <button className="nav-icon text-white transition-colors hover:text-white">
-                  <Sun className="h-5 w-5" />
+                <button
+                  className="nav-icon text-white transition-colors hover:text-white"
+                  onClick={toggleTheme}
+                  aria-label="Toggle color theme"
+                >
+                  {theme === 'dark' ? (
+                    <Sun className="h-5 w-5" />
+                  ) : (
+                    <Moon className="h-5 w-5" />
+                  )}
                 </button>
                 <button className="nav-icon text-white transition-colors hover:text-white">
                   <Grid className="h-5 w-5" />
@@ -134,7 +146,10 @@ const Header: React.FC = () => {
                   <div className="ml-1 flex h-full w-10 items-center justify-center">
                     <div className="h-8 w-8 overflow-hidden rounded-full">
                       <img
-                        src={user?.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face'}
+                        src={
+                          user?.avatar ||
+                          'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face'
+                        }
                         alt="Profile"
                         className="h-full w-full object-cover"
                       />
@@ -163,12 +178,17 @@ const Header: React.FC = () => {
                                 // Trigger logout and redirect to login
                                 logout().finally(() => {
                                   setIsProfileOpen(false)
-                                  navigate('/dashboard')
+                                  navigate('/login')
                                 })
                                 return
                               }
                               if (item.key === 'leaderboard') {
                                 navigate('/leaderboard')
+                                setIsProfileOpen(false)
+                                return
+                              }
+                              if (item.key === 'bookmarks') {
+                                navigate('/dashboard/bookmarks')
                                 setIsProfileOpen(false)
                                 return
                               }
