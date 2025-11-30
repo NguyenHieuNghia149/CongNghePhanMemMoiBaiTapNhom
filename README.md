@@ -118,3 +118,115 @@ Nhiệm vụ:
                         + Kết quả chi tiết từng testcase
                         + Thông báo lỗi nếu có
                 - Lọc và sắp xếp submissions theo thời gian (mới nhất trước)
+
+3.  Áp dụng lazy loading cho trang Lesson Detail Page
+
+        Lazy loading cho nội dung bài học:
+                - Sử dụng Intersection Observer API để phát hiện khi phần nội dung bài học (content section) xuất hiện trong viewport
+                - Chỉ load và render nội dung HTML khi người dùng scroll đến phần đó
+                - Hiển thị loading spinner trong khi đang fetch và render nội dung
+                - Sử dụng rootMargin: '100px' để trigger load sớm hơn 100px trước khi phần tử vào viewport
+                - Tối ưu hiệu suất bằng cách chỉ load một lần (unobserve sau khi đã load)
+
+        Lazy loading cho phần bình luận:
+                - Áp dụng tương tự cho phần Comments Section
+                - Sử dụng rootMargin: '200px' để load comments sớm hơn khi người dùng sắp scroll đến
+                - Tách biệt observer cho content và comments để tối ưu trải nghiệm người dùng
+                - Component CommentsSection chỉ được render khi phần tử observer được trigger
+
+        Tự động đánh dấu bài học đã hoàn thành:
+                - Theo dõi sự kiện scroll của window để phát hiện khi người dùng đọc đến cuối bài học
+                - Sử dụng throttling (500ms) để tối ưu hiệu suất scroll listener
+                - Tự động mark lesson as completed khi:
+                        + Người dùng scroll đến 80% chiều dài trang
+                        + Hoặc còn cách đáy trang 200px
+                - Hiển thị thông báo xác nhận khi bài học được đánh dấu hoàn thành
+                - Tránh duplicate requests bằng cách sử dụng ref để track trạng thái đã mark
+
+4.  Chức năng Comment (Bình luận)
+
+        API Backend:
+                - Endpoint POST `/api/comments`: Tạo comment mới cho lesson hoặc problem
+                - Endpoint GET `/api/comments/lesson/:lessonId`: Lấy danh sách comments theo lesson
+                - Endpoint GET `/api/comments/problem/:problemId`: Lấy danh sách comments theo problem
+                - Endpoint PUT `/api/comments/:id`: Cập nhật comment (chỉ author mới được sửa)
+                - Endpoint DELETE `/api/comments/:id`: Xóa comment (author hoặc admin/teacher)
+                - Validation và authorization: Kiểm tra user đã đăng nhập, chỉ cho phép author sửa/xóa comment của mình
+                - Join với bảng users để lấy thông tin user (tên, avatar, email) khi trả về comments
+
+        UI Component CommentsSection:
+                - Component tái sử dụng được, hỗ trợ cả lesson và problem
+                - Hiển thị form nhập comment (chỉ hiển thị khi user đã đăng nhập)
+                - Danh sách comments với thông tin:
+                        + Avatar và tên người comment
+                        + Thời gian comment (format: "MMM DD, YYYY, HH:MM")
+                        + Nội dung comment
+                - Chức năng Edit: Cho phép author chỉnh sửa comment của mình
+                        + Click vào icon Edit để chuyển sang chế độ edit
+                        + Hiển thị textarea với nội dung hiện tại
+                        + Có nút Cancel và Save
+                - Chức năng Delete: Cho phép author hoặc admin/teacher xóa comment
+                        + Hiển thị confirmation dialog trước khi xóa
+                        + Optimistic update: Xóa ngay khỏi UI, rollback nếu API fail
+                - Loading states: Hiển thị spinner khi đang fetch comments
+                - Empty state: Hiển thị message khi chưa có comment nào
+                - Real-time update: Tự động refresh danh sách sau khi create/update/delete
+
+5.  Chức năng Favorite (Yêu thích/Bookmark)
+
+        API Backend:
+                - Endpoint PUT `/api/favorites/:problemId/toggle`: Toggle favorite cho challenge/problem
+                - Endpoint PUT `/api/favorites/lesson/:lessonId/toggle`: Toggle favorite cho lesson
+                - Endpoint GET `/api/favorites`: Lấy danh sách favorite challenges của user
+                - Endpoint GET `/api/favorites/lessons`: Lấy danh sách favorite lessons của user
+                - Endpoint GET `/api/favorites/check/:problemId`: Kiểm tra challenge có được favorite chưa
+                - Endpoint GET `/api/favorites/lesson/:lessonId/check`: Kiểm tra lesson có được favorite chưa
+                - Xử lý race condition: Kiểm tra lại nếu có duplicate key error
+                - Response trả về: isFavorite (boolean), message, và data (thông tin favorite nếu có)
+
+        UI Integration:
+                - Hiển thị icon favorite (bookmark) trên Lesson Card và Challenge Card
+                - Optimistic update: Cập nhật UI ngay lập tức, rollback nếu API fail
+                - Sync favorite status từ server khi load danh sách lessons/challenges
+                - Hiển thị trạng thái favorite với màu sắc khác nhau (filled/unfilled icon)
+                - Hỗ trợ filter "Show Favorites Only" trên trang Lessons
+
+
+6.  Chức năng Learning Process (Theo dõi tiến trình học tập)
+
+        API Backend - Learned Lessons:
+                - Endpoint POST `/api/learned-lessons/mark-completed`: Đánh dấu lesson đã hoàn thành
+                - Endpoint GET `/api/learned-lessons/check/:lessonId`: Kiểm tra lesson đã hoàn thành chưa
+                - Endpoint GET `/api/learned-lessons/user/completed`: Lấy danh sách tất cả lessons đã hoàn thành của user
+                - Tự động tạo record trong bảng `learned_lessons` khi user hoàn thành lesson
+                - Tránh duplicate: Kiểm tra lesson đã completed chưa trước khi tạo mới
+                - Lưu trữ thông tin: userId, lessonId, completedAt, createdAt, updatedAt
+
+        API Backend - Learning Progress:
+                - Endpoint GET `/api/learning-process/user/progress`: Lấy tiến trình học tập tổng thể của user
+                        + Trả về danh sách topics với thông tin:
+                                * topicId, topicName
+                                * totalProblems, solvedProblems, solvedPercentage
+                                * totalLessons, completedLessons, completionPercentage
+                                * lastSubmittedAt, lastCompletedAt
+                - Endpoint GET `/api/learning-process/topic/:topicId/progress`: Lấy tiến trình của một topic cụ thể
+                - Endpoint GET `/api/learning-process/lesson/:lessonId/progress`: Lấy tiến trình của một lesson cụ thể
+                        + Trả về: lessonId, lessonTitle, topicId, topicName
+                        + totalLessons trong topic, completedLessons, completionPercentage
+                        + lastCompletedAt
+                - Endpoint GET `/api/learning-process/user/lesson-progress`: Lấy tiến trình lessons của user (tất cả topics)
+                - Endpoint GET `/api/learning-process/recent-topic`: Lấy topic gần nhất có submission
+                - Endpoint GET `/api/learning-process/recent-lesson`: Lấy lesson gần nhất đã hoàn thành
+
+        UI Integration:
+                - Tự động mark lesson as completed khi user scroll đến cuối bài học (80% hoặc cách đáy 200px)
+                - Hiển thị thông báo "Lesson Completed! 🎉" khi lesson được đánh dấu hoàn thành
+                - Thông báo tự động ẩn sau 3 giây
+                - Tracking progress: Lưu trữ tiến trình học tập để hiển thị trên dashboard/profile
+                - Hiển thị completion percentage cho từng topic và lesson
+
+        Business Logic:
+                - Một lesson chỉ được đánh dấu completed một lần cho mỗi user
+                - Completion được tính dựa trên việc user đã scroll đến cuối bài học
+                - Progress percentage được tính: (completedLessons / totalLessons) * 100
+                - Hỗ trợ query progress theo user, topic, hoặc lesson cụ thể
