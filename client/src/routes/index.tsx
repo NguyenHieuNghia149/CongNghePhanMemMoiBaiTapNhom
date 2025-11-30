@@ -5,14 +5,15 @@ import Login from '@/pages/auth/login/Login'
 import Register from '@/pages/auth/register/Register'
 import ForgotPassword from '@/pages/auth/forgotpassword/ForgotPassword'
 import Profile from '@/pages/profile/Profile'
+import Lessons from '@/pages/lessons/Lessons'
 import HomePage from '@/pages/home/Home'
+import LessonDetail from '@/pages/LessonDetail/LessonDetail'
 import { PublicRoute } from './PublicRoute'
 import { ProtectedRoute } from './ProtectedRoute'
 import ChallengePage from '@/pages/challenge/ChallengePage'
 import ProblemDetailPage from '@/pages/challengeDetail/ProblemDetailPage'
-import Lessons from '@/pages/lessons/Lessons'
-import LessonDetail from '@/pages/LessonDetail/LessonDetail'
-
+import BookmarksPage from '@/pages/bookmarks/BookmarksPage'
+import NotFound from '@/pages/NotFound'
 // removed unused import
 
 export const router = createBrowserRouter([
@@ -76,6 +77,15 @@ export const router = createBrowserRouter([
         path: 'lessons/:lessonId',
         element: <LessonDetail />,
       },
+      
+      {
+        path: 'dashboard/bookmarks',
+        element: (
+          <ProtectedRoute>
+            <BookmarksPage />
+          </ProtectedRoute>
+        ),
+      },
     ],
   },
   {
@@ -84,6 +94,23 @@ export const router = createBrowserRouter([
       <ProtectedRoute>
         <ProblemDetailPage />
       </ProtectedRoute>
+    ),
+  },
+
+  {
+    path: 'exam/create',
+    element: (
+      <MainLayout>
+        <NotFound />
+      </MainLayout>
+    ),
+  },
+  {
+    path: '*',
+    element: (
+      <MainLayout>
+        <NotFound />
+      </MainLayout>
     ),
   },
 ])
