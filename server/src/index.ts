@@ -10,6 +10,7 @@ import { DatabaseService } from './database/connection';
 import route from './routes';
 import { initializeWebSocket } from './services/websocket.service';
 import { queueService } from './services/queue.service';
+import { examAutoSubmitService } from './services/exam-auto-submit.service';
 
 const app = express();
 const server = createServer(app);
@@ -99,7 +100,10 @@ async function startServer() {
     // Initialize WebSocket
     initializeWebSocket(server);
 
-    // Connect to Redis
+    // Start exam auto-submit service
+    await examAutoSubmitService.start();
+
+    // Connect to Redis (optional)
     // queueService
     //   .connect()
     //   .then(() => console.log('Connected to Redis'))

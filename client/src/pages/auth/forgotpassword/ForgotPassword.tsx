@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
+import { isAxiosError } from 'axios'
 import { apiClient } from '@/config/axios.config'
 import './ForgotPassword.css'
 
@@ -35,6 +36,20 @@ const ForgotPassword: React.FC = () => {
     }
   }, [step])
 
+  const extractErrorMessage = (error: unknown, fallback: string): string => {
+    if (isAxiosError(error)) {
+      const message = error.response?.data?.message
+      if (typeof message === 'string' && message.trim()) return message
+    }
+    if (error instanceof Error && error.message) {
+      return error.message
+    }
+    if (typeof error === 'string' && error.trim()) {
+      return error
+    }
+    return fallback
+  }
+
   const handleSendOTP = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setFieldError(null)
@@ -52,16 +67,16 @@ const ForgotPassword: React.FC = () => {
 
     try {
       setIsLoading(true)
-  const response = await apiClient.post('/auth/send-reset-otp', { email })
-      
+      const response = await apiClient.post('/auth/send-reset-otp', { email })
+
       if (response.data.success) {
         setError(null)
         setStep('otp')
         setOtp(['', '', '', '', '', ''])
         setOtpCooldown(60)
       }
-    } catch (err: any) {
-      const errorMsg = err?.response?.data?.message || 'Failed to send OTP'
+    } catch (err) {
+      const errorMsg = extractErrorMessage(err, 'Failed to send OTP')
       setError(errorMsg)
     } finally {
       setIsLoading(false)
@@ -82,7 +97,10 @@ const ForgotPassword: React.FC = () => {
     }
   }
 
-  const handleOTPKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleOTPKeyDown = (
+    index: number,
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) => {
     if (e.key === 'Backspace' && !otp[index] && index > 0) {
       inputRefs.current[index - 1]?.focus()
     }
@@ -90,7 +108,10 @@ const ForgotPassword: React.FC = () => {
 
   const handleOTPPaste = (e: React.ClipboardEvent) => {
     e.preventDefault()
-    const pasteData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+    const pasteData = e.clipboardData
+      .getData('text')
+      .replace(/\D/g, '')
+      .slice(0, 6)
     const newOtp = pasteData.split('').concat(Array(6).fill('')).slice(0, 6)
     setOtp(newOtp)
 
@@ -111,15 +132,18 @@ const ForgotPassword: React.FC = () => {
 
     try {
       setIsLoading(true)
-      const response = await apiClient.post('/auth/verify-otp', { email, otp: otpCode })
+      const response = await apiClient.post('/auth/verify-otp', {
+        email,
+        otp: otpCode,
+      })
 
       if (response.data.success) {
         setError(null)
         setStep('password')
         setFieldError(null)
       }
-    } catch (err: any) {
-      const errorMsg = err?.response?.data?.message || 'Invalid OTP'
+    } catch (err) {
+      const errorMsg = extractErrorMessage(err, 'Invalid OTP')
       setError(errorMsg)
     } finally {
       setIsLoading(false)
@@ -162,14 +186,16 @@ const ForgotPassword: React.FC = () => {
 
       if (response.data.success) {
         setError(null)
-        setSuccessMessage('Password reset successfully! Redirecting to login...')
+        setSuccessMessage(
+          'Password reset successfully! Redirecting to login...'
+        )
         // Reset all states and redirect after showing message
         setTimeout(() => {
           window.location.href = '/login'
         }, 2000)
       }
-    } catch (err: any) {
-      const errorMsg = err?.response?.data?.message || 'Failed to reset password'
+    } catch (err) {
+      const errorMsg = extractErrorMessage(err, 'Failed to reset password')
       setError(errorMsg)
     } finally {
       setIsLoading(false)
@@ -181,12 +207,12 @@ const ForgotPassword: React.FC = () => {
 
     try {
       setIsLoading(true)
-  await apiClient.post('/auth/send-reset-otp', { email })
+      await apiClient.post('/auth/send-reset-otp', { email })
       setOtp(['', '', '', '', '', ''])
       setOtpCooldown(60)
       setError(null)
-    } catch (err: any) {
-      const errorMsg = err?.response?.data?.message || 'Failed to resend OTP'
+    } catch (err) {
+      const errorMsg = extractErrorMessage(err, 'Failed to resend OTP')
       setError(errorMsg)
     } finally {
       setIsLoading(false)
@@ -223,14 +249,17 @@ const ForgotPassword: React.FC = () => {
               <div className="fp-hero__content">
                 <div className="fp-hero__badge">Code & Learn</div>
                 <h1 className="fp-hero__title">
-                  {step === 'email' && "Forgot your password?"}
-                  {step === 'otp' && "Verify your email"}
-                  {step === 'password' && "Set new password"}
+                  {step === 'email' && 'Forgot your password?'}
+                  {step === 'otp' && 'Verify your email'}
+                  {step === 'password' && 'Set new password'}
                 </h1>
                 <p className="fp-hero__desc">
-                  {step === 'email' && "Enter your email address and we'll send you a reset code."}
-                  {step === 'otp' && "Enter the 6-digit code we sent to your email."}
-                  {step === 'password' && "Create a strong new password for your account."}
+                  {step === 'email' &&
+                    "Enter your email address and we'll send you a reset code."}
+                  {step === 'otp' &&
+                    'Enter the 6-digit code we sent to your email.'}
+                  {step === 'password' &&
+                    'Create a strong new password for your account.'}
                 </p>
               </div>
               <div className="fp-hero__image-wrapper">
@@ -252,8 +281,17 @@ const ForgotPassword: React.FC = () => {
                   type="button"
                   disabled={isLoading}
                 >
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                   Back
                 </button>
@@ -261,18 +299,18 @@ const ForgotPassword: React.FC = () => {
 
               <div className="fp-form__header">
                 <h2>
-                  {step === 'email' && "Password reset"}
-                  {step === 'otp' && "Verify OTP"}
-                  {step === 'password' && "New password"}
+                  {step === 'email' && 'Password reset'}
+                  {step === 'otp' && 'Verify OTP'}
+                  {step === 'password' && 'New password'}
                 </h2>
                 <p>
                   {step === 'email' && "We'll email you a reset code"}
                   {step === 'otp' && `Code sent to ${email}`}
-                  {step === 'password' && "Create a strong new password"}
+                  {step === 'password' && 'Create a strong new password'}
                 </p>
               </div>
 
-              {(error) && (
+              {error && (
                 <div
                   className="fp-form__error"
                   style={{
@@ -285,7 +323,7 @@ const ForgotPassword: React.FC = () => {
                 </div>
               )}
 
-              {(successMessage) && (
+              {successMessage && (
                 <div
                   className="fp-form__error"
                   style={{
@@ -379,22 +417,22 @@ const ForgotPassword: React.FC = () => {
                     className="btn-primary"
                     disabled={isLoading || otp.join('').length !== 6}
                   >
-                    {isLoading ? (
-                      <span className="spinner" />
-                    ) : (
-                      'Verify OTP'
-                    )}
+                    {isLoading ? <span className="spinner" /> : 'Verify OTP'}
                   </button>
 
                   <div className="fp-otp-footer">
-                    <p className="fp-otp-footer-text">Didn't receive the code?</p>
+                    <p className="fp-otp-footer-text">
+                      Didn't receive the code?
+                    </p>
                     <button
                       type="button"
                       className="fp-resend-button"
                       onClick={handleResendOTP}
                       disabled={otpCooldown > 0 || isLoading}
                     >
-                      {otpCooldown > 0 ? `Resend in ${otpCooldown}s` : 'Resend Code'}
+                      {otpCooldown > 0
+                        ? `Resend in ${otpCooldown}s`
+                        : 'Resend Code'}
                     </button>
                   </div>
                 </form>

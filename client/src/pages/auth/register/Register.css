@@ -57,7 +57,8 @@
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translate(0, 0) scale(1);
   }
   33% {
@@ -75,7 +76,11 @@
     linear-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px),
     linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
   background-size: 50px 50px;
-  mask-image: radial-gradient(ellipse 80% 50% at 50% 50%, #000 40%, transparent 100%);
+  mask-image: radial-gradient(
+    ellipse 80% 50% at 50% 50%,
+    #000 40%,
+    transparent 100%
+  );
 }
 
 /* Container */
@@ -227,9 +232,15 @@
   border-radius: 50%;
 }
 
-.dot--red { background: #ef4444; }
-.dot--yellow { background: #f59e0b; }
-.dot--green { background: #10b981; }
+.dot--red {
+  background: #ef4444;
+}
+.dot--yellow {
+  background: #f59e0b;
+}
+.dot--green {
+  background: #10b981;
+}
 
 .code-window__content {
   padding: 1.5rem;
@@ -242,10 +253,18 @@
   color: #cbd5e1;
 }
 
-.code-keyword { color: #c084fc; }
-.code-variable { color: #60a5fa; }
-.code-string { color: #34d399; }
-.code-method { color: #fbbf24; }
+.code-keyword {
+  color: #c084fc;
+}
+.code-variable {
+  color: #60a5fa;
+}
+.code-string {
+  color: #34d399;
+}
+.code-method {
+  color: #fbbf24;
+}
 
 /* Form Section */
 .register-form-section {

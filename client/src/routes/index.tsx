@@ -1,18 +1,20 @@
 import React from 'react'
 import { createBrowserRouter } from 'react-router-dom'
 import MainLayout from '@/layouts/MainLayout/MainLayout'
-import Login from '@/pages/auth/login/Login'
+import Login from '@/pages/auth/Login/Login'
 import Register from '@/pages/auth/register/Register'
 import ForgotPassword from '@/pages/auth/forgotpassword/ForgotPassword'
 import Profile from '@/pages/profile/Profile'
 import Lessons from '@/pages/lessons/Lessons'
 import HomePage from '@/pages/home/Home'
 import LessonDetail from '@/pages/LessonDetail/LessonDetail'
+import TopicLessonsPage from '@/pages/lessons/TopicLessonsPage'
 import { PublicRoute } from './PublicRoute'
 import { ProtectedRoute } from './ProtectedRoute'
 import { TeacherRoute } from './TeacherRoute'
 import ChallengePage from '@/pages/challenge/ChallengePage'
 import ProblemDetailPage from '@/pages/challengeDetail/ProblemDetailPage'
+import Ranking from '@/pages/ranking/Ranking'
 import BookmarksPage from '@/pages/bookmarks/BookmarksPage'
 import ExamList from '@/pages/exam/list/ExamList'
 import ExamDetail from '@/pages/exam/detail/ExamDetail'
@@ -20,6 +22,10 @@ import ExamResults from '@/pages/exam/results/ExamResults'
 import ExamResultsAdmin from '@/pages/exam/results/ExamResultsAdmin'
 import ExamChallengeDetail from '@/pages/exam/challenge/ExamChallengeDetail'
 import NotFound from '@/pages/NotFound'
+import ManageTeacher from '@/pages/admin/manageteacher/ManageTeacher'
+import ManageUser from '@/pages/admin/manageuser/ManageUser'
+import ManageLesson from '@/pages/admin/managelesson/ManageLesson'
+import AdminHome from '@/pages/admin/adminhome/AdminHome'
 import UserSubmissionsPage from '@/pages/user/submissions/UserSubmissionsPage'
 // removed unused import
 
@@ -51,6 +57,39 @@ export const router = createBrowserRouter([
       </PublicRoute>
     ),
   },
+
+  {
+    path: 'admin',
+    element: (
+      <TeacherRoute>
+        <AdminHome />
+      </TeacherRoute>
+    ),
+  },
+  {
+    path: 'admin/users',
+    element: (
+      <TeacherRoute>
+        <ManageUser />
+      </TeacherRoute>
+    ),
+  },
+  {
+    path: 'admin/teachers',
+    element: (
+      <TeacherRoute>
+        <ManageTeacher />
+      </TeacherRoute>
+    ),
+  },
+  {
+    path: 'admin/lessons',
+    element: (
+      <TeacherRoute>
+        <ManageLesson />
+      </TeacherRoute>
+    ),
+  },
   {
     path: '/',
     element: <MainLayout />,
@@ -80,8 +119,16 @@ export const router = createBrowserRouter([
         element: <Lessons />,
       },
       {
+        path: 'lessons/topic/:topicId',
+        element: <TopicLessonsPage />,
+      },
+      {
         path: 'lessons/:lessonId',
         element: <LessonDetail />,
+      },
+      {
+        path: 'leaderboard',
+        element: <Ranking />,
       },
       {
         path: 'dashboard/bookmarks',

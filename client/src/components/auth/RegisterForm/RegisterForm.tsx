@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { AppDispatch, RootState } from '../../../stores/stores'
-import { clearFieldError, clearError, sendOTP, setPendingRegistration } from '../../../stores/slices/authSlice'
+import { AppDispatch, RootState } from '../../../store/stores'
+import {
+  clearFieldError,
+  clearError,
+  sendOTP,
+  setPendingRegistration,
+} from '../../../store/slices/authSlice'
 import Input from '../../../components/common/Input/Input'
 import Button from '../../common/Button/Button'
 import Alert from '../../common/Alert/Alert'
@@ -53,11 +58,12 @@ const RegisterForm: React.FC = () => {
     }
   }, [pendingRegistration])
 
-  const handleChange = (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({ ...prev, [field]: e.target.value }))
-    setLocalErrors(prev => ({ ...prev, [field]: undefined }))
-    dispatch(clearFieldError(field))
-  }
+  const handleChange =
+    (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      setFormData(prev => ({ ...prev, [field]: e.target.value }))
+      setLocalErrors(prev => ({ ...prev, [field]: undefined }))
+      dispatch(clearFieldError(field))
+    }
 
   const validateField = (field: keyof FormData): string | undefined => {
     const value = formData[field]
@@ -65,12 +71,14 @@ const RegisterForm: React.FC = () => {
     switch (field) {
       case 'firstname':
       case 'lastname':
-        if (!value.trim()) return `${field === 'firstname' ? 'First' : 'Last'} name is required`
+        if (!value.trim())
+          return `${field === 'firstname' ? 'First' : 'Last'} name is required`
         if (value.trim().length < 2) return 'Must be at least 2 characters'
         break
       case 'email':
         if (!value.trim()) return 'Email is required'
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Invalid email format'
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
+          return 'Invalid email format'
         break
       case 'password':
         if (!value) return 'Password is required'
@@ -105,13 +113,13 @@ const RegisterForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validateAll()) {
       return
     }
 
     // Save form data and request OTP, then move to OTP step
-     dispatch(setPendingRegistration({ ...formData }))
+    dispatch(setPendingRegistration({ ...formData }))
     dispatch(sendOTP(formData.email))
   }
 
@@ -121,10 +129,18 @@ const RegisterForm: React.FC = () => {
     <div className="register-form">
       <div className="register-form__header">
         <h2 className="register-form__title">Create your account</h2>
-        <p className="register-form__subtitle">Join us and start your coding journey</p>
+        <p className="register-form__subtitle">
+          Join us and start your coding journey
+        </p>
       </div>
 
-      {error && <Alert type="error" message={error} onClose={() => dispatch(clearError())} />}
+      {error && (
+        <Alert
+          type="error"
+          message={error}
+          onClose={() => dispatch(clearError())}
+        />
+      )}
 
       <form onSubmit={handleSubmit} noValidate>
         <div className="register-form__row">
@@ -149,7 +165,7 @@ const RegisterForm: React.FC = () => {
             type="text"
             placeholder="Doe"
             value={formData.lastname}
-            onChange={handleChange('lastname')}       
+            onChange={handleChange('lastname')}
             onBlur={() => {
               const error = validateField('lastname')
               if (error) setLocalErrors(prev => ({ ...prev, lastname: error }))
@@ -199,7 +215,11 @@ const RegisterForm: React.FC = () => {
           tone="dark"
           icon={
             <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+              <path
+                fillRule="evenodd"
+                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                clipRule="evenodd"
+              />
             </svg>
           }
           rightButton={
@@ -222,7 +242,8 @@ const RegisterForm: React.FC = () => {
           onChange={handleChange('passwordConfirm')}
           onBlur={() => {
             const error = validateField('passwordConfirm')
-            if (error) setLocalErrors(prev => ({ ...prev, passwordConfirm: error }))
+            if (error)
+              setLocalErrors(prev => ({ ...prev, passwordConfirm: error }))
           }}
           error={mergedErrors.passwordConfirm}
           required
@@ -230,12 +251,22 @@ const RegisterForm: React.FC = () => {
           tone="dark"
           icon={
             <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+              <path
+                fillRule="evenodd"
+                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                clipRule="evenodd"
+              />
             </svg>
           }
         />
 
-        <Button type="submit" variant="primary" size="lg" fullWidth loading={isLoading}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          fullWidth
+          loading={isLoading}
+        >
           Create Account
         </Button>
       </form>

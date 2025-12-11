@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react'
-import {
-  profileAPI,
-  ProfileData,
-  UpdateProfileData,
-} from '../../services/api/user.service'
+import { profileAPI } from '@/services/api/profile.service'
+import { ProfileData, UpdateProfileData } from '@/types/profile.types'
 
 export const useProfile = (userId?: string) => {
   const [profile, setProfile] = useState<ProfileData | null>(null)

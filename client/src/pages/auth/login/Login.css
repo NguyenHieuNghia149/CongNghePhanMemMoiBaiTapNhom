@@ -349,7 +349,7 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 30%, #2563eb 100%);
+  background: #20d761;
   color: white;
   border: none;
   padding: 14px 24px;
@@ -363,12 +363,13 @@
   justify-content: center;
   gap: 8px;
   margin-top: 8px;
-  box-shadow: 0 10px 20px rgba(124, 58, 237, 0.25);
+  box-shadow: 0 10px 20px rgba(32, 215, 97, 0.25);
 }
 
 .btn-primary:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 10px 20px rgba(124, 58, 237, 0.35);
+  box-shadow: 0 10px 20px rgba(32, 215, 97, 0.35);
+  background: #1ec355;
 }
 
 .btn-primary:disabled {
@@ -536,7 +537,7 @@
   user-select: none;
 }
 
-.checkbox input[type="checkbox"] {
+.checkbox input[type='checkbox'] {
   width: 18px;
   height: 18px;
   cursor: pointer;
@@ -692,18 +693,28 @@
   animation: slideInUp 0.4s ease-out backwards;
 }
 
-.login-form-wrapper > *:nth-child(1) { animation-delay: 0.05s; }
-.login-form-wrapper > *:nth-child(2) { animation-delay: 0.1s; }
-.login-form-wrapper > *:nth-child(3) { animation-delay: 0.15s; }
-.login-form-wrapper > *:nth-child(4) { animation-delay: 0.2s; }
-.login-form-wrapper > *:nth-child(5) { animation-delay: 0.25s; }
+.login-form-wrapper > *:nth-child(1) {
+  animation-delay: 0.05s;
+}
+.login-form-wrapper > *:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.login-form-wrapper > *:nth-child(3) {
+  animation-delay: 0.15s;
+}
+.login-form-wrapper > *:nth-child(4) {
+  animation-delay: 0.2s;
+}
+.login-form-wrapper > *:nth-child(5) {
+  animation-delay: 0.25s;
+}
 
 /* Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
   .login-form-wrapper > * {
     animation: none;
   }
-  
+
   .link::after {
     transition: none;
   }
