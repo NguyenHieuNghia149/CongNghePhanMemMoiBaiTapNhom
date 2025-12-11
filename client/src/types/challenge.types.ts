@@ -4,11 +4,12 @@ export interface Challenge {
   description: string
   difficulty: 'easy' | 'medium' | 'hard'
   topic: string
-  createdAt: string
+  createdAt?: string
   updatedAt?: string
   totalPoints?: number
   isSolved?: boolean
   isFavorite?: boolean
+  obtainedPoints?: number
 }
 
 export interface TestCase {
@@ -54,13 +55,13 @@ export interface Problem {
   difficulty: 'easy' | 'medium' | 'hard'
   constraint: string
   tags: string[]
-  lessonId: string
-  topicId: string
+  lessonId?: string
+  topicId?: string
   totalPoints: number
-  isSolved: boolean
-  isFavorite: boolean
-  createdAt: string
-  updatedAt: string
+  isSolved?: boolean
+  isFavorite?: boolean
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface ProblemDetailResponse {
@@ -81,6 +82,9 @@ export interface Cursor {
 export interface PaginatedResponse<T> {
   items: T[]
   nextCursor: Cursor | null
+  // Optional metadata returned by some endpoints (e.g., user's rank for this topic)
+  rank?: number
+  rankingPoint?: number
 }
 
 export interface ChallengeItem {

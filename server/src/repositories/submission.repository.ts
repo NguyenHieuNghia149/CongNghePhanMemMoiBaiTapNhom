@@ -1,6 +1,6 @@
-import { eq, and, desc, asc, count, sql, inArray } from 'drizzle-orm';
+import { eq, and, desc, asc, count, sql, inArray, getTableColumns } from 'drizzle-orm';
 import { BaseRepository, PaginationOptions, PaginationResult } from './base.repository';
-import { submissions, SubmissionEntity, SubmissionInsert } from '@/database/schema';
+import { submissions, SubmissionEntity, SubmissionInsert, problems } from '@/database/schema';
 import { ESubmissionStatus } from '@/enums/submissionStatus.enum';
 
 export class SubmissionRepository extends BaseRepository<
@@ -10,6 +10,48 @@ export class SubmissionRepository extends BaseRepository<
 > {
   constructor() {
     super(submissions);
+  }
+
+  async findLatestByParticipationAndProblem(
+    participationId: string,
+    problemId: string
+  ): Promise<SubmissionEntity | null> {
+    const [row] = await this.db
+      .select()
+      .from(submissions)
+      .where(
+        and(
+          eq(submissions.examParticipationId, participationId),
+          eq(submissions.problemId, problemId)
+        )
+      )
+      .orderBy(desc(submissions.submittedAt))
+      .limit(1);
+
+    return row || null;
+  }
+
+  async findLatestByUserProblemBetween(
+    userId: string,
+    problemId: string,
+    start: Date,
+    end: Date
+  ): Promise<SubmissionEntity | null> {
+    const [row] = await this.db
+      .select()
+      .from(submissions)
+      .where(
+        and(
+          eq(submissions.userId, userId),
+          eq(submissions.problemId, problemId),
+          sql`${submissions.submittedAt} >= ${start}`,
+          sql`${submissions.submittedAt} <= ${end}`
+        )
+      )
+      .orderBy(desc(submissions.submittedAt))
+      .limit(1);
+
+    return row || null;
   }
 
   async findByUserId(
@@ -200,6 +242,66 @@ export class SubmissionRepository extends BaseRepository<
     };
   }
 
+  async findByParticipationAndProblem(
+    participationId: string,
+    problemId: string,
+    paginationOptions: PaginationOptions = {}
+  ): Promise<PaginationResult<SubmissionEntity>> {
+    const { page = 1, limit = 10, sortBy = 'submittedAt', sortOrder = 'desc' } = paginationOptions;
+
+    if (page < 1 || limit < 1) {
+      throw new Error('Page and limit must be positive numbers');
+    }
+
+    const offset = (page - 1) * limit;
+
+    // Query submissions for specific participation and problem
+    const query = this.db
+      .select()
+      .from(submissions)
+      .where(
+        and(
+          eq(submissions.examParticipationId, participationId),
+          eq(submissions.problemId, problemId)
+        )
+      );
+
+    const dataQuery = query
+      .limit(limit)
+      .offset(offset)
+      .orderBy(sortOrder === 'asc' ? asc(submissions.submittedAt) : desc(submissions.submittedAt));
+
+    // Count total records
+    const countQuery = await this.db
+      .select({ total: count() })
+      .from(submissions)
+      .where(
+        and(
+          eq(submissions.examParticipationId, participationId),
+          eq(submissions.problemId, problemId)
+        )
+      );
+
+    const total = countQuery[0]?.total || 0;
+    const data = await dataQuery;
+
+    const totalPages = Math.ceil(total / limit);
+    const hasNext = page < totalPages;
+    const hasPrev = page > 1;
+
+    return {
+      data,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext,
+        hasPrev,
+      },
+    };
+  }
+
   async updateStatus(
     id: string,
     status: ESubmissionStatus,
@@ -327,5 +429,59 @@ export class SubmissionRepository extends BaseRepository<
       .limit(1);
 
     return !!result;
+  }
+
+  async findByUserAndStatus(
+    userId: string,
+    status: ESubmissionStatus,
+    paginationOptions: PaginationOptions = {}
+  ): Promise<PaginationResult<SubmissionEntity & { problemTitle: string }>> {
+    const { page = 1, limit = 10, sortBy = 'submittedAt', sortOrder = 'desc' } = paginationOptions;
+
+    if (page < 1 || limit < 1) {
+      throw new Error('Page and limit must be positive numbers');
+    }
+
+    const offset = (page - 1) * limit;
+
+    const query = this.db
+      .select({
+        ...getTableColumns(submissions),
+        problemTitle: problems.title,
+      })
+      .from(submissions)
+      .leftJoin(problems, eq(submissions.problemId, problems.id))
+      .where(and(eq(submissions.userId, userId), eq(submissions.status, status)));
+
+    const dataQuery = query
+      .limit(limit)
+      .offset(offset)
+      .orderBy(sortOrder === 'asc' ? asc(submissions.submittedAt) : desc(submissions.submittedAt));
+
+    const countQuery = await this.db
+      .select({ total: count() })
+      .from(submissions)
+      .where(and(eq(submissions.userId, userId), eq(submissions.status, status)));
+
+    const total = countQuery[0]?.total || 0;
+    const data = await dataQuery;
+
+    const totalPages = Math.ceil(total / limit);
+    const hasNext = page < totalPages;
+    const hasPrev = page > 1;
+
+    // Cast data to match Expected Type (or update type definition if possible)
+    // Here we return intersection type
+    return {
+      data: data as unknown as (SubmissionEntity & { problemTitle: string })[],
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext,
+        hasPrev,
+      },
+    };
   }
 }

@@ -11,6 +11,7 @@ class SubmissionsService {
   async runCode(
     payload: RunOrSubmitPayload
   ): Promise<RunResponseWrapper['data']> {
+    // Note: callers must pass `participationId` explicitly (Redux preferred).
     const res = await apiClient.post('/submissions/run', payload)
     const json = res.data as RunResponseWrapper
     if (!json?.success || !json.data?.success) {
@@ -23,6 +24,7 @@ class SubmissionsService {
   }
 
   async submitCode(payload: RunOrSubmitPayload): Promise<SubmitResponseData> {
+    // Note: callers must pass `participationId` explicitly (Redux preferred).
     const res = await apiClient.post('/submissions', payload)
     const json = res.data as SubmitResponseWrapper
     if (res.status !== 201 || !json?.success) {
@@ -47,9 +49,50 @@ class SubmissionsService {
     return json.data
   }
 
+  async getUserSubmissions(params?: {
+    limit?: number
+    offset?: number
+    status?: string
+  }): Promise<{
+    submissions: SubmissionDetail[]
+    total: number
+    limit: number
+    offset: number
+  }> {
+    const res = await apiClient.get('/submissions/user/my-submissions', {
+      params,
+    })
+    console.log(res)
+    const json = res.data as {
+      success?: boolean
+      data?: {
+        submissions?: SubmissionDetail[]
+        total?: number
+        limit?: number
+        offset?: number
+      }
+      message?: string
+    }
+    if (!json?.success || !json.data) {
+      throw new Error(json?.message || 'Failed to get user submissions')
+    }
+
+    return {
+      submissions: json.data.submissions || [],
+      total: json.data.total || 0,
+      limit: json.data.limit || (params?.limit ?? 10),
+      offset: json.data.offset || (params?.offset ?? 0),
+    }
+  }
+
   async getProblemSubmissions(
     problemId: string,
-    params?: { limit?: number; offset?: number; status?: string }
+    params?: {
+      limit?: number
+      offset?: number
+      status?: string
+      participationId?: string
+    }
   ): Promise<{
     submissions: SubmissionDetail[]
     total: number

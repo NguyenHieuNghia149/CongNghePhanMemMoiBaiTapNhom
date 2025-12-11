@@ -34,12 +34,15 @@ export interface SubmissionDetail {
   submittedAt: string
   judgedAt?: string
   executionTime?: number
+  problemTitle?: string
+  sourceCode?: string
 }
 
 export interface RunOrSubmitPayload {
   sourceCode: string
   language: SupportedLanguage
   problemId: string
+  participationId?: string
 }
 
 export interface RunResponseWrapper {

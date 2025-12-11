@@ -10,10 +10,17 @@ import HomePage from '@/pages/home/Home'
 import LessonDetail from '@/pages/LessonDetail/LessonDetail'
 import { PublicRoute } from './PublicRoute'
 import { ProtectedRoute } from './ProtectedRoute'
+import { TeacherRoute } from './TeacherRoute'
 import ChallengePage from '@/pages/challenge/ChallengePage'
 import ProblemDetailPage from '@/pages/challengeDetail/ProblemDetailPage'
 import BookmarksPage from '@/pages/bookmarks/BookmarksPage'
+import ExamList from '@/pages/exam/list/ExamList'
+import ExamDetail from '@/pages/exam/detail/ExamDetail'
+import ExamResults from '@/pages/exam/results/ExamResults'
+import ExamResultsAdmin from '@/pages/exam/results/ExamResultsAdmin'
+import ExamChallengeDetail from '@/pages/exam/challenge/ExamChallengeDetail'
 import NotFound from '@/pages/NotFound'
+import UserSubmissionsPage from '@/pages/user/submissions/UserSubmissionsPage'
 // removed unused import
 
 export const router = createBrowserRouter([
@@ -44,7 +51,6 @@ export const router = createBrowserRouter([
       </PublicRoute>
     ),
   },
-
   {
     path: '/',
     element: <MainLayout />,
@@ -77,7 +83,6 @@ export const router = createBrowserRouter([
         path: 'lessons/:lessonId',
         element: <LessonDetail />,
       },
-      
       {
         path: 'dashboard/bookmarks',
         element: (
@@ -86,8 +91,41 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+      {
+        path: '/dashboard/submissions',
+        element: (
+          <ProtectedRoute>
+            <UserSubmissionsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'exam/:examId/results',
+        element: (
+          <ProtectedRoute>
+            <ExamResults />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'exam',
+        element: (
+          <ProtectedRoute>
+            <ExamList />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'exam/:examId/results/manage',
+        element: (
+          <TeacherRoute>
+            <ExamResultsAdmin />
+          </TeacherRoute>
+        ),
+      },
     ],
   },
+
   {
     path: '/problems/:id',
     element: (
@@ -105,6 +143,23 @@ export const router = createBrowserRouter([
       </MainLayout>
     ),
   },
+  {
+    path: 'exam/:examId',
+    element: (
+      <ProtectedRoute>
+        <ExamDetail />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: 'exam/:examId/challenge/:challengeId/',
+    element: (
+      <ProtectedRoute>
+        <ExamChallengeDetail />
+      </ProtectedRoute>
+    ),
+  },
+
   {
     path: '*',
     element: (
