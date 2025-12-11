@@ -191,7 +191,6 @@ Nhiệm vụ:
                 - Hiển thị trạng thái favorite với màu sắc khác nhau (filled/unfilled icon)
                 - Hỗ trợ filter "Show Favorites Only" trên trang Lessons
 
-
 6.  Chức năng Learning Process (Theo dõi tiến trình học tập)
 
         API Backend - Learned Lessons:
@@ -230,3 +229,38 @@ Nhiệm vụ:
                 - Completion được tính dựa trên việc user đã scroll đến cuối bài học
                 - Progress percentage được tính: (completedLessons / totalLessons) * 100
                 - Hỗ trợ query progress theo user, topic, hoặc lesson cụ thể
+
+Tuần 5
+
+Nhiệm vụ:
+
+1.  Chức năng Exam (Thi cử)
+
+        Quản lý kỳ thi (Exam):
+                - API tạo, sửa, xóa kỳ thi (Admin/Teacher)
+                - API lấy danh sách kỳ thi: Đang diễn ra, Sắp tới, Đã kết thúc
+                - Thiết lập cấu hình kỳ thi: Thời gian bắt đầu, Thời lượng, Danh sách câu hỏi
+                - Đăng ký tham gia kỳ thi (Enrollment)
+
+        Giao diện làm bài thi (Exam Interface):
+                - Chế độ Fullscreen/Focus mode để giảm thiểu gian lận
+                - Đồng hồ đếm ngược (Countdown Timer) sync với server
+                - Danh sách câu hỏi trong đề thi & Trạng thái làm bài
+                - Tự động nộp bài khi hết giờ (Auto-submit)
+                - Chặn xem kết quả/testcase chi tiết trong khi thi (chỉ hiện pass/fail public testcases hoặc ẩn hoàn toàn)
+
+2.  Xem tất cả submission của User
+
+        API Backend:
+                - Endpoint GET `/api/submissions/my-submissions`: Lấy lịch sử submit của bản thân
+                - Endpoint GET `/api/submissions/user/:userId`: Xem lịch sử của user khác (nếu public)
+                - Hỗ trợ filter: Problem, Status (AC, WA, TLE...), Language, Date
+                - Thống kê tổng quan: Số bài đã giải, Tỷ lệ accepted, Biểu đồ activity (Heatmap)
+
+        UI Integration:
+                - Trang Submissions History cá nhân
+                - Bảng danh sách submissions:
+                        + Cột: Thời gian, Bài toán, Kết quả (màu sắc phân loại), Ngôn ngữ, Runtime, Memory
+                        + Click vào row để xem chi tiết code và log
+                - Biểu đồ thống kê hoạt động (Submission Heatmap) theo thời gian
+                - Bộ lọc tìm kiếm submission nâng cao
