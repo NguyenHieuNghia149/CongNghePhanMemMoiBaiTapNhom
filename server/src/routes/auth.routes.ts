@@ -61,6 +61,7 @@ router.post(
 );
 // Profile routes
 router.get('/me', authenticationToken, authController.getProfile.bind(authController));
+
 router.get(
   '/profile/:userId',
   authenticationToken,
@@ -88,18 +89,9 @@ router.post(
   authController.sendVerificationCode.bind(authController)
 );
 
-router.post(
-  '/send-reset-otp',
-  authRateLimit,
-  authController.sendResetOTP.bind(authController)
-);
+router.post('/send-reset-otp', authRateLimit, authController.sendResetOTP.bind(authController));
 
-router.post(
-  '/verify-otp',
-  authRateLimit,
-  authController.verifyOTP.bind(authController)
-);
-
+router.post('/verify-otp', authRateLimit, authController.verifyOTP.bind(authController));
 
 router.get('/health', authRateLimit, (req, res) => {
   res.json({ status: 'ok' });

@@ -28,7 +28,7 @@ import {
 } from '@/services/api/learningprocess.service'
 import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
-import { RootState } from '@/stores/stores'
+import { RootState } from '@/store/stores'
 
 // const ProgressCard: React.FC<ProgressCardProps> = ({
 //   title,

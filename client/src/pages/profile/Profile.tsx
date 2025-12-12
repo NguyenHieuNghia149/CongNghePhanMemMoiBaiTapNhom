@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useProfile } from '../../hooks/api/useProfile'
-import { UpdateProfileData } from '../../services/api/user.service'
+import { UpdateProfileData } from '../../services/api/profile.service'
 import '../../pages/profile/Profile.css'
 import { API_CONFIG } from '../../config/api.config'
 import { tokenManager } from '../../services/auth/token.service'
@@ -93,10 +93,13 @@ const Profile: React.FC = () => {
         throw new Error(json?.message || 'Upload failed')
       }
 
+      console.log('Upload avatar response:', json)
+
       if (!json?.data?.avatar) {
         throw new Error('Upload response invalid: Missing avatar URL')
       }
 
+      console.log('Extracted avatar URL:', json.data.avatar)
       return json.data.avatar as string
     } catch (error) {
       if (error instanceof Error) {

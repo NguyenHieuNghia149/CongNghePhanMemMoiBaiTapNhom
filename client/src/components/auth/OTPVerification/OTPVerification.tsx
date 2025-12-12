@@ -1,8 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
-import { AppDispatch, RootState } from '../../../stores/stores'
-import { sendOTP, clearError, decrementCooldown, setStep, registerUser } from '../../../stores/slices/authSlice'
+import { AppDispatch, RootState } from '../../../store/stores'
+import {
+  sendOTP,
+  clearError,
+  decrementCooldown,
+  setStep,
+  registerUser,
+} from '../../../store/slices/authSlice'
 import Button from '../../common/Button/Button'
 import Alert from '../../common/Alert/Alert'
 import './OTPVerification.css'
@@ -10,9 +16,13 @@ import './OTPVerification.css'
 const OTPVerification: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>()
   const navigate = useNavigate()
-  const { isLoading, error, registrationEmail, otpCooldown, pendingRegistration } = useSelector(
-    (state: RootState) => state.auth.register
-  )
+  const {
+    isLoading,
+    error,
+    registrationEmail,
+    otpCooldown,
+    pendingRegistration,
+  } = useSelector((state: RootState) => state.auth.register)
 
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
@@ -47,7 +57,10 @@ const OTPVerification: React.FC = () => {
     }
   }
 
-  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (
+    index: number,
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) => {
     if (e.key === 'Backspace' && !otp[index] && index > 0) {
       inputRefs.current[index - 1]?.focus()
     }
@@ -55,10 +68,13 @@ const OTPVerification: React.FC = () => {
 
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault()
-    const pasteData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+    const pasteData = e.clipboardData
+      .getData('text')
+      .replace(/\D/g, '')
+      .slice(0, 6)
     const newOtp = pasteData.split('').concat(Array(6).fill('')).slice(0, 6)
     setOtp(newOtp)
-    
+
     // Focus last filled input or first empty
     const nextIndex = Math.min(pasteData.length, 5)
     inputRefs.current[nextIndex]?.focus()
@@ -66,7 +82,7 @@ const OTPVerification: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     const otpCode = otp.join('')
     if (otpCode.length !== 6) {
       return
@@ -76,13 +92,16 @@ const OTPVerification: React.FC = () => {
       return
     }
 
-    const result = await dispatch(registerUser({ ...pendingRegistration, otp: otpCode }))
-    
+    const result = await dispatch(
+      registerUser({ ...pendingRegistration, otp: otpCode })
+    )
+
     if (registerUser.fulfilled.match(result)) {
       // Success - navigate to login
       navigate('/login', {
         state: {
-          message: 'Registration successful! Please login with your credentials.',
+          message:
+            'Registration successful! Please login with your credentials.',
           email: registrationEmail,
         },
       })
@@ -91,7 +110,7 @@ const OTPVerification: React.FC = () => {
 
   const handleResendOTP = async () => {
     if (!registrationEmail || otpCooldown > 0) return
-    
+
     setOtp(['', '', '', '', '', ''])
     await dispatch(sendOTP(registrationEmail))
   }
@@ -107,26 +126,44 @@ const OTPVerification: React.FC = () => {
     <div className="otp-verification">
       <button className="otp-back-button" onClick={handleBack} type="button">
         <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+          <path
+            fillRule="evenodd"
+            d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+            clipRule="evenodd"
+          />
         </svg>
         Back
       </button>
 
       <div className="otp-header">
         <div className="otp-icon">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg
+            width="48"
+            height="48"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
             <path d="M7 11V7a5 5 0 0 1 10 0v4" />
           </svg>
         </div>
         <h2 className="otp-title">Verify Your Email</h2>
         <p className="otp-subtitle">
-          We've sent a 6-digit code to<br />
+          We've sent a 6-digit code to
+          <br />
           <strong>{registrationEmail}</strong>
         </p>
       </div>
 
-      {error && <Alert type="error" message={error} onClose={() => dispatch(clearError())} />}
+      {error && (
+        <Alert
+          type="error"
+          message={error}
+          onClose={() => dispatch(clearError())}
+        />
+      )}
 
       <form onSubmit={handleSubmit}>
         <div className="otp-inputs" onPaste={handlePaste}>

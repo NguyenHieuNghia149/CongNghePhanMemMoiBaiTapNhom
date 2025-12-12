@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
-import { RootState } from '../../../stores/stores'
-import { resetAuth } from '../../../stores/slices/authSlice'
+import { RootState } from '../../../store/stores'
+import { resetAuth } from '../../../store/slices/authSlice'
 import RegisterForm from '../../../components/auth/RegisterForm/RegisterForm'
 import OTPVerification from '../../../components/auth/OTPVerification/OTPVerification'
 import './Register.css'
@@ -34,37 +34,59 @@ const Register: React.FC = () => {
           <div className="register-hero">
             <div className="register-hero__content">
               <div className="register-hero__badge">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <polyline points="16 18 22 12 16 6" />
                   <polyline points="8 6 2 12 8 18" />
                 </svg>
                 Code & Learn
               </div>
-              
+
               <h1 className="register-hero__title">
                 Start Your
                 <br />
                 Coding Journey
               </h1>
-              
+
               <p className="register-hero__description">
-                Join thousands of developers improving their skills through challenges and practice.
+                Join thousands of developers improving their skills through
+                challenges and practice.
               </p>
 
               <div className="register-hero__features">
                 <div className="feature-item">
                   <div className="feature-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
                       <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                       <polyline points="22 4 12 14.01 9 11.01" />
                     </svg>
                   </div>
                   <span>Interactive challenges</span>
                 </div>
-                
+
                 <div className="feature-item">
                   <div className="feature-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
                       <path d="M18 20V10" />
                       <path d="M12 20V4" />
                       <path d="M6 20v-6" />
@@ -72,10 +94,17 @@ const Register: React.FC = () => {
                   </div>
                   <span>Track your progress</span>
                 </div>
-                
+
                 <div className="feature-item">
                   <div className="feature-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
                       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                       <circle cx="9" cy="7" r="4" />
                       <path d="M23 21v-2a4 4 0 0 0-3-3.87" />

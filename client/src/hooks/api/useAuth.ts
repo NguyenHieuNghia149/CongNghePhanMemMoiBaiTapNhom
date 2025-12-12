@@ -1,12 +1,12 @@
 import { useCallback } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { AppDispatch, RootState } from '@/stores/stores'
+import { AppDispatch, RootState } from '@/store/stores'
 import {
   clearLoginError,
   initializeSession,
   loginUser,
   logoutUser,
-} from '@/stores/slices/authSlice'
+} from '@/store/slices/authSlice'
 import type { LoginCredentials } from '../../types/auth.types'
 
 export const useAuth = () => {

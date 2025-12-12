@@ -4,8 +4,10 @@ import { useDispatch } from 'react-redux'
 import './App.css'
 
 import router from './routes'
-import { initializeSession, logoutUser } from '../../client/src/stores/slices/authSlice'
-import { AppDispatch } from '../../client/src/stores/stores'
+import { initializeSession, logoutUser } from './store/slices/authSlice'
+import { ConfigProvider, App as AntdApp, theme as antdTheme } from 'antd'
+import { useTheme } from '@/contexts/useTheme'
+import { AppDispatch } from './store/stores'
 
 function App() {
   const dispatch = useDispatch<AppDispatch>()
@@ -28,8 +30,22 @@ function App() {
       window.removeEventListener('auth:failed', handleAuthFailed)
     }
   }, [dispatch])
+  const { theme } = useTheme()
 
-  return <RouterProvider router={router} />
+  return (
+    <ConfigProvider
+      theme={{
+        algorithm:
+          theme === 'dark'
+            ? antdTheme.darkAlgorithm
+            : antdTheme.defaultAlgorithm,
+      }}
+    >
+      <AntdApp>
+        <RouterProvider router={router} />
+      </AntdApp>
+    </ConfigProvider>
+  )
 }
 
 export default App

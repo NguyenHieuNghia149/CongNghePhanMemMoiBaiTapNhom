@@ -38,7 +38,7 @@ const GoogleButton: React.FC<GoogleButtonProps> = ({
     const timer = setTimeout(() => {
       if (buttonRef.current && window.google?.accounts?.id) {
         setIsGoogleLoaded(true)
-        
+
         try {
           const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
           if (!clientId) {
@@ -89,7 +89,13 @@ const GoogleButton: React.FC<GoogleButtonProps> = ({
   }
 
   const GoogleIcon = () => (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <path
         d="M19.9895 10.1871C19.9895 9.36767 19.9214 8.76973 19.7742 8.14966H10.1992V11.848H15.8195C15.7062 12.7671 15.0943 14.1512 13.7346 15.0813L13.7155 15.2051L16.7429 17.4969L16.9527 17.5174C18.8789 15.7789 19.9895 13.221 19.9895 10.1871Z"
         fill="#4285F4"
@@ -124,8 +130,8 @@ const GoogleButton: React.FC<GoogleButtonProps> = ({
   return (
     <div className="google-button-container">
       {/* Native Google Button (hidden when using custom variant) */}
-      <div 
-        ref={buttonRef} 
+      <div
+        ref={buttonRef}
         className={`google-button-native ${variant !== 'default' ? 'google-button-native--hidden' : ''}`}
         style={{ opacity: isGoogleLoaded && variant === 'default' ? 1 : 0 }}
       />
@@ -143,7 +149,7 @@ const GoogleButton: React.FC<GoogleButtonProps> = ({
                   resolve()
                   return
                 }
-                
+
                 const maxWait = 5000
                 const startTime = Date.now()
                 const checkInterval = setInterval(() => {
@@ -153,36 +159,47 @@ const GoogleButton: React.FC<GoogleButtonProps> = ({
                   } else if (Date.now() - startTime > maxWait) {
                     clearInterval(checkInterval)
                     const currentOrigin = window.location.origin
-                    reject(new Error(
-                      `Google API failed to load. ` +
-                      `Please ensure "${currentOrigin}" is added to Authorized JavaScript origins in Google Cloud Console. ` +
-                      `Also check that VITE_GOOGLE_CLIENT_ID is set correctly in .env file.`
-                    ))
+                    reject(
+                      new Error(
+                        `Google API failed to load. ` +
+                          `Please ensure "${currentOrigin}" is added to Authorized JavaScript origins in Google Cloud Console. ` +
+                          `Also check that VITE_GOOGLE_CLIENT_ID is set correctly in .env file.`
+                      )
+                    )
                   }
                 }, 100)
               })
 
               // Trigger click on the native Google button
               if (buttonRef.current) {
-                const nativeButton = buttonRef.current.querySelector('div[role="button"]') as HTMLElement
+                const nativeButton = buttonRef.current.querySelector(
+                  'div[role="button"]'
+                ) as HTMLElement
                 if (nativeButton) {
                   nativeButton.click()
                 } else {
                   // Fallback: try to find any clickable element in the native button container
-                  const clickableElement = buttonRef.current.querySelector('*') as HTMLElement
+                  const clickableElement = buttonRef.current.querySelector(
+                    '*'
+                  ) as HTMLElement
                   if (clickableElement) {
                     clickableElement.click()
                   } else {
-                    throw new Error('Native Google button not found. Please refresh the page.')
+                    throw new Error(
+                      'Native Google button not found. Please refresh the page.'
+                    )
                   }
                 }
               } else {
                 throw new Error('Button container not found')
               }
             } catch (err) {
-              const error = err instanceof Error 
-                ? err 
-                : new Error('Google sign-in failed. Please check your configuration and Google Cloud Console settings.')
+              const error =
+                err instanceof Error
+                  ? err
+                  : new Error(
+                      'Google sign-in failed. Please check your configuration and Google Cloud Console settings.'
+                    )
               onError?.(error)
             }
           }}

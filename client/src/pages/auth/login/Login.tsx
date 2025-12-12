@@ -4,13 +4,13 @@ import { useForm } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
 import { useDispatch, useSelector } from 'react-redux'
-import { AppDispatch, RootState } from '../../../stores/stores'
+import { AppDispatch, RootState } from '../../../store/stores'
 import {
   clearLoginError,
   clearLoginFieldError,
   loginUser,
   loginWithGoogle,
-} from '../../../stores/slices/authSlice'
+} from '../../../store/slices/authSlice'
 import type { LoginCredentials } from '../../../types/auth.types'
 import Alert from '../../../components/common/Alert/Alert'
 import Input from '../../../components/common/Input/Input'
@@ -41,7 +41,7 @@ const Login: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const dispatch = useDispatch<AppDispatch>()
-  
+
   const { isLoading: sessionLoading } = useSelector(
     (state: RootState) => state.auth.session
   )
@@ -72,7 +72,9 @@ const Login: React.FC = () => {
     if (lastAttempt) {
       setValue('email', lastAttempt.email, { shouldDirty: true })
       setValue('password', lastAttempt.password, { shouldDirty: true })
-      setValue('rememberMe', lastAttempt.rememberMe ?? false, { shouldDirty: true })
+      setValue('rememberMe', lastAttempt.rememberMe ?? false, {
+        shouldDirty: true,
+      })
     }
   }, [lastAttempt, setValue])
 
@@ -107,7 +109,7 @@ const Login: React.FC = () => {
 
         const redirectTo = location.state?.from?.pathname || '/'
         navigate(redirectTo)
-      } catch  {
+      } catch {
         // Error handled by Redux
       }
     },
@@ -206,7 +208,9 @@ const Login: React.FC = () => {
               {/* Divider */}
               <div className="login-divider">
                 <span className="login-divider__line" />
-                <span className="login-divider__text">Or continue with email</span>
+                <span className="login-divider__text">
+                  Or continue with email
+                </span>
                 <span className="login-divider__line" />
               </div>
 
@@ -220,7 +224,11 @@ const Login: React.FC = () => {
               )}
 
               {/* Login Form */}
-              <form className="login-form" onSubmit={handleFormSubmit} noValidate>
+              <form
+                className="login-form"
+                onSubmit={handleFormSubmit}
+                noValidate
+              >
                 <Input
                   label="Email"
                   type="email"
@@ -232,7 +240,12 @@ const Login: React.FC = () => {
                   })}
                   error={errors.email?.message || fieldErrors.email}
                   icon={
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
                       <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
                       <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
                     </svg>
@@ -250,7 +263,12 @@ const Login: React.FC = () => {
                   })}
                   error={errors.password?.message || fieldErrors.password}
                   icon={
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
                       <path
                         fillRule="evenodd"
                         d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"

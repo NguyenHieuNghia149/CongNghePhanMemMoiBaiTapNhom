@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useSelector } from 'react-redux'
-import type { RootState } from '@/stores/stores'
+import type { RootState } from '@/store/stores'
 import { Eye, AlertTriangle, Copy } from 'lucide-react'
 import MonacoEditorWrapper from '@/components/editor/MonacoEditorWrapper'
 import { submissionsService } from '@/services/api/submissions.service'

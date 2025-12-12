@@ -5,20 +5,17 @@ import {
   ErrorHandler,
   UserAlreadyExistsException,
   UserNotFoundException,
-  ValidationException,
 } from '@/exceptions/auth.exceptions';
 import {
   ChangePasswordInput,
   GoogleLoginInput,
   LoginInput,
-  RefreshTokenInput,
   RegisterInput,
 } from '@/validations/auth.validation';
 import { UserService } from '@/services/user.service';
 import { EMailService } from '@/services/email.service';
 import cloudinary from '@/config/cloudinary';
 import { Readable } from 'stream';
-// Removed session revoke validation
 
 export class AuthController {
   constructor(
@@ -56,6 +53,7 @@ export class AuthController {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
+      // sameSite: 'none',
       maxAge: 30 * 24 * 60 * 60 * 1000,
       path: '/api/auth/refresh-token',
     });
@@ -71,9 +69,6 @@ export class AuthController {
       },
     });
   }
-
-  // legacy google handler removed in favor of googleLogin above
-  // Removed revokeSession handler
 
   async login(req: Request, res: Response, next: NextFunction) {
     const result = await this.authService.login(req.body as LoginInput);
@@ -119,7 +114,7 @@ export class AuthController {
     const result = await this.authService.refreshToken({ refreshToken });
 
     // Set rotated refresh token cookie
-    res.cookie('refreshToken', result.tokens.refreshToken, {
+    res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
@@ -275,16 +270,21 @@ export class AuthController {
         },
         async (error: any, result?: any) => {
           if (error || !result) {
+            console.error('Cloudinary upload error:', error)
             return res.status(500).json({
               success: false,
               message: 'Failed to upload image',
             });
           }
 
+          console.log('Cloudinary upload success, URL:', result.secure_url)
+
           try {
             // Update user profile with Cloudinary URL
             const updateData = { avatar: result.secure_url };
             const profile = await this.userService.updateProfile(userId, updateData);
+
+            console.log('Profile updated with avatar:', profile.avatar)
 
             return res.status(200).json({
               success: true,
@@ -292,6 +292,7 @@ export class AuthController {
               data: profile,
             });
           } catch (error) {
+            console.error('Profile update error:', error)
             return res.status(500).json({
               success: false,
               message: 'Failed to update profile',

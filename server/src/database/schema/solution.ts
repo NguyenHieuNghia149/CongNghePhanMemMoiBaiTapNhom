@@ -36,5 +36,4 @@ export const updateSolutionVisibilitySchema = z.object({
   isVisible: z.boolean('Invalid visibility status'),
 });
 
-
 // Validation schemas for solution approaches
