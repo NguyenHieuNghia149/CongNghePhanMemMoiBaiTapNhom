@@ -264,3 +264,145 @@ Nhiệm vụ:
                         + Click vào row để xem chi tiết code và log
                 - Biểu đồ thống kê hoạt động (Submission Heatmap) theo thời gian
                 - Bộ lọc tìm kiếm submission nâng cao
+
+3.  Chức năng Comment (Bình luận) - Cải tiến
+
+        API Backend:
+                - Endpoint POST `/api/comments`: Tạo comment mới cho lesson hoặc problem
+                - Endpoint GET `/api/comments/lesson/:lessonId`: Lấy danh sách comments theo lesson (bao gồm replies)
+                - Endpoint GET `/api/comments/problem/:problemId`: Lấy danh sách comments theo problem (bao gồm replies)
+                - Endpoint GET `/api/comments/:commentId/replies`: Lấy danh sách replies của một comment
+                - Endpoint PUT `/api/comments/:id`: Cập nhật comment (chỉ author mới được sửa)
+                - Endpoint DELETE `/api/comments/:id`: Xóa comment (author hoặc admin/teacher)
+                - Hỗ trợ nested comments: Comments có thể có parentCommentId để tạo cấu trúc reply
+                - Validation và authorization: Kiểm tra user đã đăng nhập, chỉ cho phép author sửa/xóa comment của mình
+                - Join với bảng users để lấy thông tin user (tên, avatar, email) khi trả về comments
+                - Response trả về CommentWithReplies bao gồm cả replies của mỗi comment
+
+        UI Component CommentsSection:
+                - Component tái sử dụng được, hỗ trợ cả lesson và problem
+                - Hiển thị form nhập comment (chỉ hiển thị khi user đã đăng nhập)
+                - Danh sách comments với thông tin:
+                        + Avatar và tên người comment
+                        + Thời gian comment (format: "MMM DD, YYYY, HH:MM")
+                        + Nội dung comment
+                - Chức năng Reply: Cho phép reply comment của người khác
+                        + Click vào nút Reply để hiển thị form reply
+                        + Tạo nested comment với parentCommentId
+                        + Hiển thị replies dưới dạng nested tree
+                        + Expand/collapse replies
+                - Chức năng Edit: Cho phép author chỉnh sửa comment của mình
+                        + Click vào icon Edit để chuyển sang chế độ edit
+                        + Hiển thị textarea với nội dung hiện tại
+                        + Có nút Cancel và Save
+                - Chức năng Delete: Cho phép author hoặc admin/teacher xóa comment
+                        + Hiển thị confirmation dialog trước khi xóa
+                        + Optimistic update: Xóa ngay khỏi UI, rollback nếu API fail
+                - Loading states: Hiển thị spinner khi đang fetch comments
+                - Empty state: Hiển thị message khi chưa có comment nào
+                - Real-time update: Tự động refresh danh sách sau khi create/update/delete
+
+4.  Chức năng Favorite (Yêu thích/Bookmark) - Cải tiến
+
+        API Backend:
+                - Endpoint PUT `/api/favorites/:problemId/toggle`: Toggle favorite cho challenge/problem
+                - Endpoint PUT `/api/favorites/lesson/:lessonId/toggle`: Toggle favorite cho lesson
+                - Endpoint GET `/api/favorites`: Lấy danh sách favorite challenges của user
+                - Endpoint GET `/api/favorites/lessons`: Lấy danh sách favorite lessons của user
+                - Endpoint GET `/api/favorites/check/:problemId`: Kiểm tra challenge có được favorite chưa
+                - Endpoint GET `/api/favorites/lesson/:lessonId/check`: Kiểm tra lesson có được favorite chưa
+                - Xử lý race condition: Kiểm tra lại nếu có duplicate key error khi toggle
+                - Response trả về: isFavorite (boolean), message, và data (thông tin favorite nếu có)
+                - Join với bảng problems và lessons để trả về thông tin đầy đủ
+
+        UI Integration:
+                - Hiển thị icon favorite (bookmark) trên Lesson Card và Challenge Card
+                - Optimistic update: Cập nhật UI ngay lập tức, rollback nếu API fail
+                - Sync favorite status từ server khi load danh sách lessons/challenges
+                - Hiển thị trạng thái favorite với màu sắc khác nhau (filled/unfilled icon)
+                - Hỗ trợ filter "Show Favorites Only" trên trang Lessons và Challenges
+                - Loading state khi đang toggle favorite
+                - Toast notification khi toggle thành công/thất bại
+
+5.  Chức năng Manage User (Quản lý người dùng)
+
+        API Backend:
+                - Endpoint GET `/api/admin/users`: Lấy danh sách users với pagination và filters
+                        + Query params: page, limit, search, role, status, email, firstName, lastName
+                        + Sort: sortBy (createdAt, email, etc.), sortOrder (asc/desc)
+                        + Filter theo role: user, teacher , owner
+                        + Filter theo status: active, banned
+                - Endpoint GET `/api/admin/users/:id`: Lấy thông tin chi tiết một user
+                - Endpoint POST `/api/admin/users`: Tạo user mới
+                        + Validation: email unique, password required, role mặc định là 'user'
+                        + Hash password trước khi lưu vào database
+                - Endpoint PUT `/api/admin/users/:id`: Cập nhật thông tin user
+                        + Có thể cập nhật: firstName, lastName, email, password, status, gender, dateOfBirth
+                        + Hash password mới nếu có
+                - Endpoint DELETE `/api/admin/users/:id`: Xóa user
+                - Endpoint GET `/api/admin/users/teachers`: Lấy danh sách teachers
+                - Authorization: Chỉ Teacher hoặc Owner mới được truy cập
+                - Response trả về PaginatedResult với data, total, page, limit
+
+        UI Component ManageUser:
+                - Trang quản lý users với table hiển thị danh sách
+                - Các cột hiển thị:
+                        + Name (firstName + lastName)
+                        + Email
+                        + Gender
+                        + Date of Birth
+                        + Status (active/banned với badge màu)
+                        + Role (với tag màu sắc)
+                        + Last Login
+                        + Actions (Edit, Delete)
+                - Chức năng Search: Tìm kiếm theo name, email, role
+                - Chức năng Pagination: Phân trang với PAGE_SIZE = 10
+                - Chức năng Create: Form tạo user mới
+                        + Fields: firstName, lastName, email, password, status, gender, dateOfBirth
+                        + Validation form
+                - Chức năng Edit: Form chỉnh sửa user
+                        + Pre-fill dữ liệu hiện tại
+                        + Có thể cập nhật password (optional)
+                - Chức năng Delete: Xóa user với confirmation dialog
+                - Loading states: Hiển thị spinner khi đang fetch/update
+                - Error handling: Hiển thị error message nếu có lỗi
+                - Refresh button: Reload danh sách users
+
+6.  Chức năng Manage Teacher (Quản lý giáo viên)
+
+        API Backend:
+                - Endpoint GET `/api/admin/teachers`: Lấy danh sách teachers với pagination
+                        + Query params: page, limit, sortBy, sortOrder
+                        + Chỉ trả về users có role = 'teacher'
+                - Endpoint POST `/api/admin/teachers`: Tạo teacher mới
+                        + Force role = 'teacher' khi tạo
+                        + Validation: email unique, password required
+                        + Hash password trước khi lưu
+                - Endpoint PUT `/api/admin/teachers/:id`: Cập nhật thông tin teacher
+                        + Force giữ role = 'teacher' khi update
+                        + Có thể cập nhật: firstName, lastName, email, password, status, gender, dateOfBirth
+                - Authorization: Chỉ Owner mới được truy cập (requireOwner middleware)
+                - Sử dụng chung AdminUserService nhưng với role cố định là 'teacher'
+
+        UI Component ManageTeacher:
+                - Trang quản lý teachers với table hiển thị danh sách
+                - Các cột hiển thị:
+                        + Name (firstName + lastName)
+                        + Email
+                        + Gender
+                        + Date of Birth
+                        + Status (active/banned với badge màu)
+                        + Last Login
+                        + Actions (Edit, Delete)
+                - Chức năng Search: Tìm kiếm theo name, email
+                - Chức năng Pagination: Phân trang với PAGE_SIZE = 10
+                - Chức năng Create: Form tạo teacher mới
+                        + Fields: firstName, lastName, email, password, status, gender, dateOfBirth
+                        + Role tự động set là 'teacher'
+                - Chức năng Edit: Form chỉnh sửa teacher
+                        + Pre-fill dữ liệu hiện tại
+                        + Không cho phép thay đổi role
+                - Chức năng Delete: Xóa teacher với confirmation dialog
+                - Loading states: Hiển thị spinner khi đang fetch/update
+                - Error handling: Hiển thị error message nếu có lỗi
+                - Refresh button: Reload danh sách teachers
