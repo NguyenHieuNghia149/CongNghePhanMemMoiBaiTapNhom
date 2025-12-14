@@ -4,7 +4,9 @@ import { sql } from 'drizzle-orm';
 
 export class DatabaseUtils {
   // Fixed transaction wrapper with correct type
-  static async withTransaction<T>(callback: (tx: TransactionType) => Promise<T>): Promise<T> {
+  static async withTransaction<T>(
+    callback: (tx: TransactionType) => Promise<T>
+  ): Promise<T> {
     return await db.transaction(callback);
   }
 
@@ -34,7 +36,7 @@ export class DatabaseUtils {
     // Access the internal pool through the db instance
     const dbInternal = db as any;
     const pool = dbInternal.$client;
-
+    
     if (!pool) return null;
 
     return {
@@ -60,6 +62,7 @@ export class DatabaseUtils {
       const result = await db.execute(sql.raw(query));
       return result.rows as T[];
     } catch (error) {
+      console.error('Raw SQL execution failed:', error);
       throw error;
     }
   }
@@ -94,6 +97,7 @@ export class DatabaseUtils {
         connectionStats: connectionStatsResult.rows[0],
       };
     } catch (error: any) {
+      console.error('Failed to get database stats:', error);
       return {
         error: error.message,
       };
