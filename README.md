@@ -370,39 +370,72 @@ Nhiệm vụ:
 
 6.  Chức năng Manage Teacher (Quản lý giáo viên)
 
-        API Backend:
-                - Endpoint GET `/api/admin/teachers`: Lấy danh sách teachers với pagination
-                        + Query params: page, limit, sortBy, sortOrder
-                        + Chỉ trả về users có role = 'teacher'
-                - Endpoint POST `/api/admin/teachers`: Tạo teacher mới
-                        + Force role = 'teacher' khi tạo
-                        + Validation: email unique, password required
-                        + Hash password trước khi lưu
-                - Endpoint PUT `/api/admin/teachers/:id`: Cập nhật thông tin teacher
-                        + Force giữ role = 'teacher' khi update
-                        + Có thể cập nhật: firstName, lastName, email, password, status, gender, dateOfBirth
-                - Authorization: Chỉ Owner mới được truy cập (requireOwner middleware)
-                - Sử dụng chung AdminUserService nhưng với role cố định là 'teacher'
+            API Backend:
+                    - Endpoint GET `/api/admin/teachers`: Lấy danh sách teachers với pagination
+                            + Query params: page, limit, sortBy, sortOrder
+                            + Chỉ trả về users có role = 'teacher'
+                    - Endpoint POST `/api/admin/teachers`: Tạo teacher mới
+                            + Force role = 'teacher' khi tạo
+                            + Validation: email unique, password required
+                            + Hash password trước khi lưu
+                    - Endpoint PUT `/api/admin/teachers/:id`: Cập nhật thông tin teacher
+                            + Force giữ role = 'teacher' khi update
+                            + Có thể cập nhật: firstName, lastName, email, password, status, gender, dateOfBirth
+                    - Authorization: Chỉ Owner mới được truy cập (requireOwner middleware)
+                    - Sử dụng chung AdminUserService nhưng với role cố định là 'teacher'
 
-        UI Component ManageTeacher:
-                - Trang quản lý teachers với table hiển thị danh sách
-                - Các cột hiển thị:
-                        + Name (firstName + lastName)
-                        + Email
-                        + Gender
-                        + Date of Birth
-                        + Status (active/banned với badge màu)
-                        + Last Login
-                        + Actions (Edit, Delete)
-                - Chức năng Search: Tìm kiếm theo name, email
-                - Chức năng Pagination: Phân trang với PAGE_SIZE = 10
-                - Chức năng Create: Form tạo teacher mới
-                        + Fields: firstName, lastName, email, password, status, gender, dateOfBirth
-                        + Role tự động set là 'teacher'
-                - Chức năng Edit: Form chỉnh sửa teacher
-                        + Pre-fill dữ liệu hiện tại
-                        + Không cho phép thay đổi role
-                - Chức năng Delete: Xóa teacher với confirmation dialog
-                - Loading states: Hiển thị spinner khi đang fetch/update
-                - Error handling: Hiển thị error message nếu có lỗi
-                - Refresh button: Reload danh sách teachers
+            UI Component ManageTeacher:
+                    - Trang quản lý teachers với table hiển thị danh sách
+                    - Các cột hiển thị:
+                            + Name (firstName + lastName)
+                            + Email
+                            + Gender
+                            + Date of Birth
+                            + Status (active/banned với badge màu)
+                            + Last Login
+                            + Actions (Edit, Delete)
+                    - Chức năng Search: Tìm kiếm theo name, email
+                    - Chức năng Pagination: Phân trang với PAGE_SIZE = 10
+                    - Chức năng Create: Form tạo teacher mới
+                            + Fields: firstName, lastName, email, password, status, gender, dateOfBirth
+                            + Role tự động set là 'teacher'
+                    - Chức năng Edit: Form chỉnh sửa teacher
+                            + Pre-fill dữ liệu hiện tại
+                            + Không cho phép thay đổi role
+                    - Chức năng Delete: Xóa teacher với confirmation dialog
+                    - Loading states: Hiển thị spinner khi đang fetch/update
+                    - Error handling: Hiển thị error message nếu có lỗi
+                    - Refresh button: Reload danh sách teachers
+
+Tuần 6
+
+Nhiệm vụ:
+
+1.  Implement Socket.IO cho chức năng Notification
+
+        Backend (Socket.IO Gateway):
+                - Cài đặt gói `@nestjs/platform-socket.io` và `@nestjs/websockets`
+                - Tạo `NotificationGateway` để xử lý kết nối WebSocket
+                - Implement `handleConnection` và `handleDisconnect` để quản lý active users
+                - Authentication qua Middleware/Guard: Xác thực user token khi handshake (JWT)
+                - Map userId với socketId để gửi thông báo target user
+                - Endpoint emit notification:
+                        + Server-side Service gửi thông báo tới client cụ thể: `server.to(socketId).emit('notification', payload)`
+                - Các sự kiện notify (Events):
+                        + `system_announcement`: Thông báo từ hệ thống
+                - Lưu notification vào database (để xem lại lịch sử):
+                        + Schema: userId, type, content, isRead, link, createdAt
+
+        Frontend (Client Integration):
+                - Cài đặt `socket.io-client`
+                - Tạo `SocketContext` hoặc `useSocket` hook quản lý global connection
+                - Authenticate socket connection với token từ AuthStore
+                - Listen sự kiện `notification`:
+                        + Hiển thị Toast/Snackbar (notification pop-up) khi có tin mới
+                        + Play sound (optional)
+                        + Update badge notification count trên header
+                - Component NotificationDropdown/List:
+                        + Hiển thị danh sách thông báo phân trang (Lazy load)
+                        + UI phân biệt thông báo đã đọc/chưa đọc
+                        + Chức năng "Mark as read"
+                        + Click notification điều hướng đến trang chi tiết (bài nộp, thread bình luận)
