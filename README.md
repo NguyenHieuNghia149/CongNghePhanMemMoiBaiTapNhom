@@ -439,3 +439,26 @@ Nhiệm vụ:
                         + UI phân biệt thông báo đã đọc/chưa đọc
                         + Chức năng "Mark as read"
                         + Click notification điều hướng đến trang chi tiết (bài nộp, thread bình luận)
+
+2.  Chức năng Admin Dashboard & Manage Topic
+
+        Backend (API):
+                - Xây dựng API thống kê cho Admin Dashboard:
+                        + Tổng số user, bài học, thử thách, submissions
+                        + Số user mới theo ngày/tháng
+                        + Thống kê số lượng submissions, exams gần đây
+                - Xây dựng API quản lý Topic:
+                        + Lấy danh sách topics với phân trang, search, filter
+                        + Tạo mới, cập nhật, xoá topic
+                        + Validate dữ liệu (title, slug, description, status,...)
+
+        Frontend (UI):
+                - Trang Admin Dashboard:
+                        + Hiển thị các thẻ thống kê (cards) số lượng user, lessons, challenges, submissions
+                        + Biểu đồ (chart) thể hiện activity/submissions theo thời gian
+                        + Danh sách activity gần đây (recent submissions, exams,...)
+                - Trang Manage Topic:
+                        + Bảng (table) danh sách topics với các cột: Name, Slug, Status, Created At, Actions
+                        + Chức năng tạo mới/chỉnh sửa/xoá topic bằng modal form
+                        + Hỗ trợ search theo tên topic, filter theo status
+                        + Hiển thị loading, empty state và thông báo khi thao tác thành công/thất bại
